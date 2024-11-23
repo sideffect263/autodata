@@ -1,5 +1,6 @@
 // src/components/controls/ChartControls.jsx
 import React from 'react';
+import PropTypes from 'prop-types';
 import {
   Card,
   CardContent,
@@ -80,6 +81,12 @@ const ChartControls = ({ type, columns, selected, onChange }) => {
       </CardContent>
     </Card>
   );
+};
+ChartControls.propTypes = {
+  type: PropTypes.string.isRequired,
+  columns: PropTypes.array.isRequired,
+  selected: PropTypes.object.isRequired,
+  onChange: PropTypes.func.isRequired
 };
 
 export default ChartControls;

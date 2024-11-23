@@ -1,5 +1,8 @@
 // src/components/upload/DropZone.jsx
-import React, { useState, useCallback } from 'react';
+import React from 'react';
+
+import { useState, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { 
   Box, 
   Typography, 
@@ -47,7 +50,7 @@ const DropZone = ({ onDataProcessed }) => {
 
     const file = files[0];
     await handleFileProcess(file);
-  }, []);
+  }, );
 
   const handleFileProcess = async (file) => {
     setIsProcessing(true);
@@ -131,6 +134,9 @@ const DropZone = ({ onDataProcessed }) => {
       )}
     </Paper>
   );
+};
+DropZone.propTypes = {
+  onDataProcessed: PropTypes.func.isRequired,
 };
 
 export default DropZone;

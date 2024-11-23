@@ -1,5 +1,8 @@
 // src/components/upload/DataUpload.jsx
-import React, { useState } from 'react';
+import React from 'react';
+
+import  { useState } from 'react';
+import PropTypes from 'prop-types';
 import { 
   Box,
   Paper,
@@ -75,6 +78,9 @@ const DataUpload = ({ onDataProcessed }) => {
       </Paper>
     </Box>
   );
+};
+DataUpload.propTypes = {
+  onDataProcessed: PropTypes.func.isRequired,
 };
 
 export default DataUpload;

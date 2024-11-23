@@ -1,5 +1,8 @@
 // src/components/views/ChartsView.jsx
-import React, { useState, useMemo } from 'react';
+import React from 'react';
+
+import  { useState, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import {
   Box,
   Grid,
@@ -7,10 +10,8 @@ import {
   Card,
   CardContent,
   Typography,
-  Chip,
   IconButton,
   Tooltip,
-  Divider,
   Alert,
   Tab,
   Tabs,
@@ -24,7 +25,6 @@ import {
   Lightbulb,
   Add,
   FileDownload,
-  Info
 } from '@mui/icons-material';
 import BarChart from '../charts/BarChart';
 import LineChart from '../charts/LineChart';
@@ -32,14 +32,13 @@ import ScatterPlot from '../charts/ScatterPlot';
 import PieChart from '../charts/PieChart';
 import ChartControls from '../controls/ChartControls';
 
-const ChartsView = ({ data, analysis }) => {
+const ChartsView = ({ data }) => {
   const [currentChart, setCurrentChart] = useState('bar');
   const [selectedColumns, setSelectedColumns] = useState({
     x: '',
     y: '',
     group: ''
   });
-  const [suggestions, setSuggestions] = useState([]);
   const [activeSuggestion, setActiveSuggestion] = useState(null);
 
   // Generate chart suggestions based on data analysis
@@ -268,6 +267,10 @@ const ChartsView = ({ data, analysis }) => {
       </Grid>
     </Box>
   );
+};
+ChartsView.propTypes = {
+  data: PropTypes.array.isRequired,
+  analysis: PropTypes.object
 };
 
 export default ChartsView;

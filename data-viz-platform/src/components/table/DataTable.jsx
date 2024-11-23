@@ -1,5 +1,8 @@
 // src/components/table/DataTable.jsx
-import React, { useState, useMemo } from 'react';
+import React from 'react';
+
+import { useState, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import {
   Table,
   TableBody,
@@ -150,6 +153,9 @@ const DataTable = ({ data }) => {
       />
     </Paper>
   );
+};
+DataTable.propTypes = {
+  data: PropTypes.arrayOf(PropTypes.object).isRequired,
 };
 
 export default DataTable;

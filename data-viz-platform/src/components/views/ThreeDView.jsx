@@ -1,5 +1,4 @@
-// src/components/views/ThreeDView.jsx
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Box,
   Grid,
@@ -16,44 +15,46 @@ import {
   FormControlLabel,
   Tooltip,
   IconButton,
-  Divider,
-  Alert,
-  Button,
-  Chip
 } from '@mui/material';
 import {
   ViewInAr,
   Lightbulb,
   CameraAlt,
-  Settings,
-  Animation,
-  ColorLens,
   Save,
   RestartAlt
 } from '@mui/icons-material';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import SurfacePlot from '../visualizations/SurfacePlot';
+import PropTypes from 'prop-types';
 
-// 3D Visualization Components
 const ScatterPlot3D = ({ data, xColumn, yColumn, zColumn, pointSize = 0.1 }) => {
   return (
     <group>
-      {data?.map((point, index) => (
-        <mesh
-          key={index}
-          position={[
-            point[xColumn] / 10,
-            point[yColumn] / 10,
-            point[zColumn] / 10
-          ]}
-        >
-          <sphereGeometry args={[pointSize, 16, 16]} />
-          <meshStandardMaterial color="blue" />
-        </mesh>
-      ))}
+      {data?.map((point, index) => {
+        const position = [
+          point[xColumn] / 10,
+          point[yColumn] / 10,
+          point[zColumn] / 10
+        ];
+
+        return (
+          <mesh key={index} position={position}>
+            <sphereGeometry args={[pointSize, 16, 16]} />
+            <meshStandardMaterial color="#1976d2" />
+          </mesh>
+        );
+      })}
     </group>
   );
+};
+
+ScatterPlot3D.propTypes = {
+  data: PropTypes.arrayOf(PropTypes.object).isRequired,
+  xColumn: PropTypes.string.isRequired,
+  yColumn: PropTypes.string.isRequired,
+  zColumn: PropTypes.string.isRequired,
+  pointSize: PropTypes.number
 };
 
 const BarChart3D = ({ data, xColumn, yColumn, zColumn }) => {
@@ -76,7 +77,12 @@ const BarChart3D = ({ data, xColumn, yColumn, zColumn }) => {
   );
 };
 
-
+BarChart3D.propTypes = {
+  data: PropTypes.arrayOf(PropTypes.object).isRequired,
+  xColumn: PropTypes.string.isRequired,
+  yColumn: PropTypes.string.isRequired,
+  zColumn: PropTypes.string.isRequired
+};
 
 const ThreeDView = ({ data, analysis }) => {
   const [visualizationType, setVisualizationType] = useState('scatter');

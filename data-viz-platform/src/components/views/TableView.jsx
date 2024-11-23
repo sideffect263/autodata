@@ -1,6 +1,8 @@
 // src/components/views/TableView.jsx
 import React from 'react';
+
 import { Box, Typography } from '@mui/material';
+import PropTypes from 'prop-types';
 import DataTable from '../table/DataTable';
 
 const TableView = ({ data, analysis }) => {
@@ -22,6 +24,13 @@ const TableView = ({ data, analysis }) => {
       <DataTable data={data} />
     </Box>
   );
+};
+TableView.propTypes = {
+  data: PropTypes.array.isRequired,
+  analysis: PropTypes.shape({
+    rowCount: PropTypes.number,
+    columns: PropTypes.arrayOf(PropTypes.object),
+  }),
 };
 
 export default TableView;

@@ -1,5 +1,7 @@
 // src/components/layout/Sidebar.jsx
 import React from 'react';
+
+import PropTypes from 'prop-types';
 import {
   Drawer,
   List,
@@ -8,7 +10,6 @@ import {
   ListItemText,
   ListItemButton,
   Box,
-  Divider,
   Tooltip
 } from '@mui/material';
 import {
@@ -97,6 +98,11 @@ const Sidebar = ({ currentView, onViewChange, dataLoaded }) => {
       </Box>
     </Drawer>
   );
+};
+Sidebar.propTypes = {
+  currentView: PropTypes.string.isRequired,
+  onViewChange: PropTypes.func.isRequired,
+  dataLoaded: PropTypes.bool.isRequired,
 };
 
 export default Sidebar;
