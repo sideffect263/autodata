@@ -23,7 +23,7 @@ import {
 } from '@mui/icons-material';
 
 // Import future visualization components here
-import TableView from './TableView';  // We'll create this next
+import TableView from '../table/DataTable';  // We'll create this next
 
 const VisualizationManager = ({ data, analysis }) => {
   const [currentView, setCurrentView] = useState('table');
