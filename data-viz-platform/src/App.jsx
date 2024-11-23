@@ -1,5 +1,5 @@
 // src/App.jsx
-import { React, useState } from 'react';
+import React, { useState } from 'react';
 import { 
   ThemeProvider, 
   CssBaseline, 
@@ -62,7 +62,6 @@ const App = () => {
               backgroundColor: 'background.default'
             }}
           >
-            {renderContent()}
           </Box>
         </Box>
       </Box>
