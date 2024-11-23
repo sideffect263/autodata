@@ -1,0 +1,5 @@
+services:
+  - type: web
+    name: auto-data
+    staticPublishPath: dist
+    buildCommand: npm run build
