@@ -7,43 +7,53 @@ import {
   Card,
   CardContent,
   Typography,
-  Chip,
   IconButton,
   Tooltip,
-  Divider,
   Alert,
   Tab,
   Tabs,
-  Button
+  Button,
+  Chip,
 } from '@mui/material';
 import {
   BarChart as BarChartIcon,
   ShowChart as LineChartIcon,
   BubbleChart as ScatterPlotIcon,
   PieChart as PieChartIcon,
-  Lightbulb,
-  Add,
-  FileDownload,
-  Info
+  Lightbulb as LightbulbIcon,
+  Add as AddIcon,
+  FileDownload as FileDownloadIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
+
+// Import chart components
 import BarChart from '../charts/BarChart';
 import LineChart from '../charts/LineChart';
 import ScatterPlot from '../charts/ScatterPlot';
 import PieChart from '../charts/PieChart';
 import ChartControls from '../controls/ChartControls';
 
+// Optional: Import a loading component
+import LoadingOverlay from '../common/LoadingOverlay';
+
 const ChartsView = ({ data, analysis }) => {
+  // State management
   const [currentChart, setCurrentChart] = useState('bar');
   const [selectedColumns, setSelectedColumns] = useState({
     x: '',
     y: '',
-    group: ''
+    group: '',
+    stacked: false,
+    smooth: false,
+    showTrendline: false
   });
   const [activeSuggestion, setActiveSuggestion] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Generate chart suggestions based on data analysis and current chart type
+  // Generate chart suggestions based on data analysis
   const generateSuggestions = useMemo(() => {
-    if (!data || data.length === 0) return [];
+    if (!data || !data.length) return [];
 
     const columns = Object.keys(data[0]);
     const suggestions = [];
@@ -57,108 +67,144 @@ const ChartsView = ({ data, analysis }) => {
     const dateColumns = columns.filter(isDate);
     const categoricalColumns = columns.filter(col => !isNumeric(col) && !isDate(col));
 
-    switch (currentChart) {
-      case 'bar':
-        // Bar chart suggestions - numeric columns for y-axis, any column for x-axis
-        columns.forEach(xCol => {
-          numericColumns.forEach(yCol => {
-            if (xCol !== yCol) {
-              suggestions.push({
-                type: 'bar',
-                title: `${yCol} by ${xCol}`,
-                description: `Compare ${yCol} across different ${xCol} values`,
-                columns: {
-                  x: xCol,
-                  y: yCol,
-                  group: ''
-                }
-              });
+    // Bar chart suggestions
+    columns.forEach(xCol => {
+      numericColumns.forEach(yCol => {
+        if (xCol !== yCol) {
+          suggestions.push({
+            type: 'bar',
+            title: `${yCol} by ${xCol}`,
+            description: `Compare ${yCol} across different ${xCol} values`,
+            columns: {
+              x: xCol,
+              y: yCol,
+              group: ''
             }
           });
-        });
-        break;
-
-      case 'line':
-        // Line chart suggestions - date/numeric x-axis with numeric y-axis
-        const timeColumns = [...dateColumns, ...numericColumns];
-        timeColumns.forEach(xCol => {
-          numericColumns.forEach(yCol => {
-            if (xCol !== yCol) {
-              suggestions.push({
-                type: 'line',
-                title: `${yCol} over ${xCol}`,
-                description: `Track ${yCol} changes over ${xCol}`,
-                columns: {
-                  x: xCol,
-                  y: yCol,
-                  group: ''
-                }
-              });
-            }
-          });
-        });
-        break;
-
-      case 'scatter':
-        // Scatter plot suggestions - numeric columns only
-        for (let i = 0; i < numericColumns.length; i++) {
-          for (let j = i + 1; j < numericColumns.length; j++) {
-            suggestions.push({
-              type: 'scatter',
-              title: `${numericColumns[i]} vs ${numericColumns[j]}`,
-              description: 'Explore relationship between variables',
-              columns: {
-                x: numericColumns[i],
-                y: numericColumns[j],
-                group: ''
-              }
-            });
-          }
         }
-        break;
+      });
+    });
 
-      case 'pie':
-        // Pie chart suggestions - categorical columns with numeric values
-        categoricalColumns.forEach(catCol => {
-          if (getUniqueValuesCount(catCol) <= 10) {
-            numericColumns.forEach(numCol => {
-              suggestions.push({
-                type: 'pie',
-                title: `${numCol} by ${catCol}`,
-                description: `Distribution of ${numCol} across ${catCol} categories`,
-                columns: {
-                  x: catCol,
-                  y: numCol,
-                  group: ''
-                }
-              });
-            });
+    // Line chart suggestions
+    const timeColumns = [...dateColumns, ...numericColumns];
+    timeColumns.forEach(xCol => {
+      numericColumns.forEach(yCol => {
+        if (xCol !== yCol) {
+          suggestions.push({
+            type: 'line',
+            title: `${yCol} over ${xCol}`,
+            description: `Track changes in ${yCol} over ${xCol}`,
+            columns: {
+              x: xCol,
+              y: yCol,
+              group: ''
+            }
+          });
+        }
+      });
+    });
+
+    // Scatter plot suggestions
+    for (let i = 0; i < numericColumns.length; i++) {
+      for (let j = i + 1; j < numericColumns.length; j++) {
+        suggestions.push({
+          type: 'scatter',
+          title: `${numericColumns[i]} vs ${numericColumns[j]}`,
+          description: `Explore relationship between these metrics`,
+          columns: {
+            x: numericColumns[i],
+            y: numericColumns[j],
+            group: ''
           }
         });
-        break;
+      }
     }
 
+    // Pie chart suggestions
+    categoricalColumns.forEach(catCol => {
+      if (getUniqueValuesCount(catCol) <= 10) {
+        numericColumns.forEach(numCol => {
+          suggestions.push({
+            type: 'pie',
+            title: `Distribution of ${numCol} by ${catCol}`,
+            description: `View how ${numCol} is distributed across ${catCol} categories`,
+            columns: {
+              x: catCol,
+              y: numCol,
+              group: ''
+            }
+          });
+        });
+      }
+    });
+
     return suggestions;
-  }, [data, currentChart]);
+  }, [data]);
 
-  const handleSuggestionClick = (suggestion) => {
-    setCurrentChart(suggestion.type);
-    setSelectedColumns(suggestion.columns);
-    setActiveSuggestion(suggestion);
-  };
-
-  const handleChartTypeChange = (_, value) => {
-    setCurrentChart(value);
+  // Event handlers
+  const handleChartTypeChange = (_, newType) => {
+    setCurrentChart(newType);
     setActiveSuggestion(null);
-    // Reset selected columns when changing chart type
-    setSelectedColumns({
+    setSelectedColumns(prev => ({
+      ...prev,
       x: '',
       y: '',
       group: ''
+    }));
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setCurrentChart(suggestion.type);
+    setSelectedColumns({
+      ...selectedColumns,
+      ...suggestion.columns
+    });
+    setActiveSuggestion(suggestion);
+  };
+
+  const handleControlsChange = (newColumns) => {
+    setSelectedColumns(newColumns);
+    setActiveSuggestion(null);
+  };
+
+  const handleExport = async () => {
+    try {
+      setIsLoading(true);
+      // Implement export logic here
+      // For example, convert the chart to an image or export data
+      setIsLoading(false);
+    } catch (error) {
+      setError('Failed to export chart');
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveView = () => {
+    // Implement save view logic
+    console.log('Saving current view:', {
+      type: currentChart,
+      columns: selectedColumns,
+      settings: activeSuggestion
     });
   };
 
+  // Render current chart
   const renderChart = () => {
+    if (!data || !selectedColumns.x || !selectedColumns.y) {
+      return (
+        <Box sx={{ 
+          height: 400, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}>
+          <Typography color="text.secondary">
+            Select columns to visualize data
+          </Typography>
+        </Box>
+      );
+    }
+
     const props = {
       data,
       columns: selectedColumns
@@ -177,6 +223,14 @@ const ChartsView = ({ data, analysis }) => {
         return null;
     }
   };
+
+  if (!data || data.length === 0) {
+    return (
+      <Alert severity="info" sx={{ m: 2 }}>
+        Please upload data to create visualizations
+      </Alert>
+    );
+  }
 
   return (
     <Box sx={{ height: '100%', p: 2 }}>
@@ -203,7 +257,7 @@ const ChartsView = ({ data, analysis }) => {
           {generateSuggestions.length > 0 && (
             <Paper sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Lightbulb color="primary" sx={{ mr: 1 }} />
+                <LightbulbIcon color="primary" sx={{ mr: 1 }} />
                 <Typography variant="h6">
                   Suggested Visualizations
                 </Typography>
@@ -244,19 +298,20 @@ const ChartsView = ({ data, analysis }) => {
               </Typography>
               <Box>
                 <Tooltip title="Download Chart">
-                  <IconButton>
-                    <FileDownload />
+                  <IconButton onClick={handleExport} disabled={isLoading}>
+                    <FileDownloadIcon />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Save View">
-                  <IconButton>
-                    <Add />
+                  <IconButton onClick={handleSaveView} disabled={isLoading}>
+                    <AddIcon />
                   </IconButton>
                 </Tooltip>
               </Box>
             </Box>
-            
+
             <Box sx={{ height: 400, position: 'relative' }}>
+              {isLoading && <LoadingOverlay />}
               {renderChart()}
             </Box>
 
@@ -279,7 +334,7 @@ const ChartsView = ({ data, analysis }) => {
             type={currentChart}
             columns={Object.keys(data[0] || {})}
             selected={selectedColumns}
-            onChange={setSelectedColumns}
+            onChange={handleControlsChange}
           />
         </Grid>
       </Grid>

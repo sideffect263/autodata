@@ -9,18 +9,29 @@ import {
   MenuItem,
   Typography,
   Box,
-  Grid,
   Switch,
   FormControlLabel
 } from '@mui/material';
 
-const ChartControls = ({ type, columns, selected, onChange }) => {
+const ChartControls = ({ 
+  type = 'bar', 
+  columns = [], 
+  selected = { x: '', y: '', group: '' }, 
+  onChange 
+}) => {
   if (!columns || columns.length === 0) return null;
 
   const handleChange = (field) => (event) => {
     onChange({
       ...selected,
-      [field]: event.target.value
+      [field]: event.target.value || ''  // Ensure empty string instead of undefined
+    });
+  };
+
+  const handleSwitchChange = (field) => (event) => {
+    onChange({
+      ...selected,
+      [field]: event.target.checked
     });
   };
 
@@ -35,10 +46,11 @@ const ChartControls = ({ type, columns, selected, onChange }) => {
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>X Axis</InputLabel>
             <Select
-              value={selected.x}
+              value={selected.x || ''}
               label="X Axis"
               onChange={handleChange('x')}
             >
+              <MenuItem value="">None</MenuItem>
               {columns.map(column => (
                 <MenuItem key={column} value={column}>
                   {column}
@@ -50,10 +62,11 @@ const ChartControls = ({ type, columns, selected, onChange }) => {
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Y Axis</InputLabel>
             <Select
-              value={selected.y}
+              value={selected.y || ''}
               label="Y Axis"
               onChange={handleChange('y')}
             >
+              <MenuItem value="">None</MenuItem>
               {columns.map(column => (
                 <MenuItem key={column} value={column}>
                   {column}
@@ -66,7 +79,7 @@ const ChartControls = ({ type, columns, selected, onChange }) => {
             <FormControl fullWidth>
               <InputLabel>Group By</InputLabel>
               <Select
-                value={selected.group}
+                value={selected.group || ''}
                 label="Group By"
                 onChange={handleChange('group')}
               >
@@ -80,16 +93,14 @@ const ChartControls = ({ type, columns, selected, onChange }) => {
             </FormControl>
           )}
 
-          {/* Additional chart-specific controls */}
+          {/* Chart-specific controls */}
           {type === 'bar' && (
             <Box sx={{ mt: 2 }}>
               <FormControlLabel
                 control={
                   <Switch
-                    checked={selected.stacked}
-                    onChange={(e) => handleChange('stacked')(
-                      { target: { value: e.target.checked } }
-                    )}
+                    checked={!!selected.stacked}  // Convert to boolean
+                    onChange={handleSwitchChange('stacked')}
                   />
                 }
                 label="Stacked Bars"
@@ -102,10 +113,8 @@ const ChartControls = ({ type, columns, selected, onChange }) => {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={selected.smooth}
-                    onChange={(e) => handleChange('smooth')(
-                      { target: { value: e.target.checked } }
-                    )}
+                    checked={!!selected.smooth}  // Convert to boolean
+                    onChange={handleSwitchChange('smooth')}
                   />
                 }
                 label="Smooth Lines"
@@ -118,10 +127,8 @@ const ChartControls = ({ type, columns, selected, onChange }) => {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={selected.showTrendline}
-                    onChange={(e) => handleChange('showTrendline')(
-                      { target: { value: e.target.checked } }
-                    )}
+                    checked={!!selected.showTrendline}  // Convert to boolean
+                    onChange={handleSwitchChange('showTrendline')}
                   />
                 }
                 label="Show Trendline"
