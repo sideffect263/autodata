@@ -26,7 +26,7 @@ const AppHeader = () => {
           <IconButton 
             color="inherit"
             size="large"
-            onClick={() => window.open('https://github.com/yourusername/project', '_blank')}
+            onClick={() => window.open('https://github.com/sideffect263/autodata', '_blank')}
           >
             <GitHubIcon />
           </IconButton>

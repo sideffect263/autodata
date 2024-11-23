@@ -1,4 +1,3 @@
-// src/components/charts/LineChart.jsx
 import React, { useMemo } from 'react';
 import {
   LineChart as RechartsLineChart,
@@ -15,11 +14,11 @@ const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c'];
 
 const LineChart = ({ data, columns }) => {
   const { x, y, group } = columns;
-  
-  if (!x || !y) return null;
 
   // Process data for grouping
   const processedData = useMemo(() => {
+    if (!x || !y) return [];
+
     if (!group) return data;
 
     // Get unique values for group column
@@ -48,6 +47,8 @@ const LineChart = ({ data, columns }) => {
 
   // Get unique group values for creating lines
   const groupValues = group ? [...new Set(data.map(item => item[group]))] : [y];
+
+  if (!x || !y) return null;
 
   return (
     <ResponsiveContainer width="100%" height={400}>
