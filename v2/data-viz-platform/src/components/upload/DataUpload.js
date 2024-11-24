@@ -8,6 +8,7 @@ import {
   AlertTitle,
   CircularProgress,
   Divider,
+  Grid
 } from '@mui/material';
 import DropZone from './DropZone';
 import DataSourceSelector from './DataSourceSelector';
@@ -112,7 +113,7 @@ const DataUpload = ({ onDataProcessed }) => {
   }, [activeSource]);
 
   return (
-    <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4 }}>
+    <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4, p: 2 }}>
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h5" gutterBottom>
           Data Source Selection
@@ -159,9 +160,9 @@ const DataUpload = ({ onDataProcessed }) => {
           All data sources must provide structured data that meets the following requirements:
         </Typography>
 
-        <Box sx={{ display: 'flex', gap: 4 }}>
+        <Grid container spacing={2}>
           {/* Local file requirements */}
-          <Box flex={1}>
+          <Grid item xs={12} sm={4}>
             <Typography variant="subtitle2" gutterBottom>
               Local Files
             </Typography>
@@ -171,10 +172,10 @@ const DataUpload = ({ onDataProcessed }) => {
               • First row must contain column headers<br />
               • Consistent data formatting
             </Typography>
-          </Box>
+          </Grid>
 
           {/* API requirements */}
-          <Box flex={1}>
+          <Grid item xs={12} sm={4}>
             <Typography variant="subtitle2" gutterBottom>
               API Connections
             </Typography>
@@ -184,10 +185,10 @@ const DataUpload = ({ onDataProcessed }) => {
               • Optional auto-refresh functionality<br />
               • Custom data path navigation
             </Typography>
-          </Box>
+          </Grid>
 
           {/* Cloud storage requirements */}
-          <Box flex={1}>
+          <Grid item xs={12} sm={4}>
             <Typography variant="subtitle2" gutterBottom>
               Cloud Storage
             </Typography>
@@ -197,8 +198,8 @@ const DataUpload = ({ onDataProcessed }) => {
               • Same format requirements as local files<br />
               • Automatic file type detection
             </Typography>
-          </Box>
-        </Box>
+          </Grid>
+        </Grid>
 
         <Divider sx={{ my: 2 }} />
 

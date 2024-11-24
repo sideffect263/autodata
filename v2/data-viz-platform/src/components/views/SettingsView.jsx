@@ -16,6 +16,8 @@ import {
   Snackbar,
   Tabs,
   Tab,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   Palette,
@@ -34,6 +36,8 @@ const SettingsView = () => {
     message: '',
     severity: 'success'
   });
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleSettingChange = (setting, value) => {
     updateSettings({ [setting]: value });
@@ -214,6 +218,8 @@ const SettingsView = () => {
           value={currentTab}
           onChange={(_, value) => setCurrentTab(value)}
           sx={{ borderBottom: 1, borderColor: 'divider' }}
+          variant={isMobile ? 'scrollable' : 'standard'}
+          scrollButtons={isMobile ? 'auto' : 'off'}
         >
           {tabs.map((tab, index) => (
             <Tab

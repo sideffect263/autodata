@@ -69,7 +69,7 @@ const TableView = ({ data, analysis }) => {
           Data Overview
         </Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} sm={6} md={4}>
             <Card>
               <CardContent>
                 <Typography variant="subtitle2" color="text.secondary">
@@ -81,7 +81,7 @@ const TableView = ({ data, analysis }) => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} sm={6} md={4}>
             <Card>
               <CardContent>
                 <Typography variant="subtitle2" color="text.secondary">
@@ -93,7 +93,7 @@ const TableView = ({ data, analysis }) => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} sm={6} md={4}>
             <Card>
               <CardContent>
                 <Typography variant="subtitle2" color="text.secondary">

@@ -246,6 +246,8 @@ const ChartsView = ({ data, analysis }) => {
               value={currentChart}
               onChange={handleChartTypeChange}
               sx={{ borderRight: 1, borderColor: 'divider' }}
+              variant="scrollable"
+              scrollButtons="auto"
             >
               <Tab icon={<BarChartIcon />} label="Bar Chart" value="bar" />
               <Tab icon={<LineChartIcon />} label="Line Chart" value="line" />
