@@ -1,4 +1,3 @@
-// src/utils/fileHandlers.js
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
@@ -22,7 +21,7 @@ export const processFile = async (file) => {
     }
 
     return {
-      data: validateData(data),
+      data: validateAndCleanData(data),
       metadata: {
         fileName: file.name,
         fileType,
@@ -100,7 +99,7 @@ const parseExcel = (file) => {
       try {
         const workbook = XLSX.read(event.target.result, { type: 'array' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(firstSheet);
+        const data = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
         resolve(data);
       } catch (error) {
         reject(new Error('Error parsing Excel file'));
@@ -112,14 +111,14 @@ const parseExcel = (file) => {
   });
 };
 
-const validateData = (data) => {
+const validateAndCleanData = (data) => {
   if (!Array.isArray(data) || data.length === 0) {
     throw new Error('Data must be a non-empty array');
   }
 
   // Remove rows with all null/undefined values
   const cleanData = data.filter(row => {
-    return Object.values(row).some(value => value != null);
+    return Object.values(row).some(value => value != null && value !== '');
   });
 
   // Validate data structure consistency
