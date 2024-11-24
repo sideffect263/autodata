@@ -1,5 +1,5 @@
 // src/components/views/SettingsView.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Paper,
@@ -24,41 +24,24 @@ import {
   Save,
   RestartAlt,
 } from '@mui/icons-material';
-
-// Default settings
-const defaultSettings = {
-  theme: 'light',
-  chartType: '2d',
-  performance: 'balanced',
-  autoRefresh: false,
-  dataLimit: 1000,
-};
+import { useSettings } from '../../contexts/SettingsContext';
 
 const SettingsView = () => {
+  const { settings, updateSettings } = useSettings();
   const [currentTab, setCurrentTab] = useState(0);
-  const [settings, setSettings] = useState(() => {
-    const savedSettings = localStorage.getItem('appSettings');
-    return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
-  });
-  
   const [notification, setNotification] = useState({
     open: false,
     message: '',
     severity: 'success'
   });
 
-  // Handle settings changes
   const handleSettingChange = (setting, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [setting]: value
-    }));
+    updateSettings({ [setting]: value });
   };
 
-  // Save settings
   const handleSave = () => {
     try {
-      localStorage.setItem('appSettings', JSON.stringify(settings));
+      // Settings are automatically saved by the context
       setNotification({
         open: true,
         message: 'Settings saved successfully',
@@ -73,9 +56,16 @@ const SettingsView = () => {
     }
   };
 
-  // Reset settings
   const handleReset = () => {
-    setSettings(defaultSettings);
+    updateSettings({
+      theme: 'light',
+      chartType: '2d',
+      performance: 'balanced',
+      autoRefresh: false,
+      dataLimit: 1000,
+      animations: false,
+      autoSuggest: false,
+    });
     setNotification({
       open: true,
       message: 'Settings reset to defaults',
@@ -89,13 +79,12 @@ const SettingsView = () => {
         <FormControl fullWidth>
           <InputLabel>Theme</InputLabel>
           <Select
-            value={settings.theme}
+            value={settings.theme || 'light'}
             label="Theme"
             onChange={(e) => handleSettingChange('theme', e.target.value)}
           >
             <MenuItem value="light">Light</MenuItem>
             <MenuItem value="dark">Dark</MenuItem>
-            <MenuItem value="system">System</MenuItem>
           </Select>
         </FormControl>
       </Grid>
@@ -103,7 +92,7 @@ const SettingsView = () => {
         <FormControlLabel
           control={
             <Switch
-              checked={settings.animations}
+              checked={Boolean(settings.animations)}
               onChange={(e) => handleSettingChange('animations', e.target.checked)}
             />
           }
@@ -119,7 +108,7 @@ const SettingsView = () => {
         <FormControl fullWidth>
           <InputLabel>Default Chart Type</InputLabel>
           <Select
-            value={settings.chartType}
+            value={settings.chartType || '2d'}
             label="Default Chart Type"
             onChange={(e) => handleSettingChange('chartType', e.target.value)}
           >
@@ -133,7 +122,7 @@ const SettingsView = () => {
         <FormControlLabel
           control={
             <Switch
-              checked={settings.autoSuggest}
+              checked={Boolean(settings.autoSuggest)}
               onChange={(e) => handleSettingChange('autoSuggest', e.target.checked)}
             />
           }
@@ -149,7 +138,7 @@ const SettingsView = () => {
         <FormControl fullWidth>
           <InputLabel>Performance Mode</InputLabel>
           <Select
-            value={settings.performance}
+            value={settings.performance || 'balanced'}
             label="Performance Mode"
             onChange={(e) => handleSettingChange('performance', e.target.value)}
           >
@@ -163,7 +152,7 @@ const SettingsView = () => {
         <FormControlLabel
           control={
             <Switch
-              checked={settings.autoRefresh}
+              checked={Boolean(settings.autoRefresh)}
               onChange={(e) => handleSettingChange('autoRefresh', e.target.checked)}
             />
           }
@@ -191,9 +180,12 @@ const SettingsView = () => {
     }
   ];
 
+  const handleCloseNotification = () => {
+    setNotification(prev => ({ ...prev, open: false }));
+  };
+
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
-      {/* Header */}
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h4" gutterBottom>
           Settings
@@ -217,7 +209,6 @@ const SettingsView = () => {
         </Box>
       </Box>
 
-      {/* Settings Tabs */}
       <Paper sx={{ mb: 3 }}>
         <Tabs
           value={currentTab}
@@ -235,20 +226,18 @@ const SettingsView = () => {
         </Tabs>
       </Paper>
 
-      {/* Settings Content */}
       <Paper sx={{ p: 3 }}>
         {tabs[currentTab].content}
       </Paper>
 
-      {/* Notifications */}
       <Snackbar
         open={notification.open}
         autoHideDuration={6000}
-        onClose={() => setNotification({ ...notification, open: false })}
+        onClose={handleCloseNotification}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert 
-          onClose={() => setNotification({ ...notification, open: false })} 
+          onClose={handleCloseNotification}
           severity={notification.severity}
           variant="filled"
         >
