@@ -123,7 +123,7 @@ const DataUpload = ({ onDataProcessed }) => {
         </Typography>
 
         {/* Main data source selector */}
-        <DataSourceSelector onDataSourceSelect={handleDataSourceSelect} />
+        <DataSourceSelector onDataProcessed={onDataProcessed} onDataSourceSelect={handleDataSourceSelect} />
 
         {/* Loading indicator */}
         {isLoading && (

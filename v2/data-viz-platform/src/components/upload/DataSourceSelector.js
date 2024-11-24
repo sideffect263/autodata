@@ -31,8 +31,9 @@ import {
   Edit as EditIcon,
   Save as SaveIcon,
 } from '@mui/icons-material';
+import DropZone from './DropZone';
 
-const DataSourceSelector = ({ onDataSourceSelect }) => {
+const DataSourceSelector = ({ onDataSourceSelect,onDataProcessed }) => {
   // Source type state
   const [sourceType, setSourceType] = useState('local');
   
@@ -146,12 +147,7 @@ const DataSourceSelector = ({ onDataSourceSelect }) => {
       case 'local':
         return (
           <Box sx={{ textAlign: 'center', p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Upload Local File
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Drag and drop your file here or click to browse
-            </Typography>
+            
             <input
               type="file"
               accept=".csv,.json,.xlsx"
@@ -168,15 +164,10 @@ const DataSourceSelector = ({ onDataSourceSelect }) => {
               }}
             />
             <label htmlFor="file-upload">
-              <Button
-                variant="outlined"
-                component="span"
-                startIcon={<UploadIcon />}
-                sx={{ mr: 2 }}
-              >
-                Choose File
-              </Button>
+            <DropZone onDataProcessed={onDataProcessed} />
+
             </label>
+
           </Box>
         );
 
