@@ -62,7 +62,7 @@ const AppContent = () => {
           dataLoaded={Boolean(data && analysis)}
           isLoading={isLoading}
         />
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column',width:"100%" }}>
           <AppHeader />
           <Box 
             component="main" 
