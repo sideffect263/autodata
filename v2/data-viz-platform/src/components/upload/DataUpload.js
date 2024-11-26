@@ -1,5 +1,5 @@
 // src/components/upload/DataUpload.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   Box,
   Paper,
@@ -8,20 +8,23 @@ import {
   AlertTitle,
   CircularProgress,
   Divider,
-  Grid
+  Grid,
+  LinearProgress
 } from '@mui/material';
-import DropZone from './DropZone';
+import { useData } from '../../contexts/DataContext';
 import DataSourceSelector from './DataSourceSelector';
 import { processFile } from '../../utils/fileHandlers';
 
 const DataUpload = ({ onDataProcessed }) => {
-  const [uploadError, setUploadError] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const { 
+    processData, 
+    isLoading, 
+    error,
+    processingStatus 
+  } = useData();
   const [activeSource, setActiveSource] = useState(null);
 
   const handleDataSourceSelect = async (source) => {
-    setIsLoading(true);
-    setUploadError(null);
     setActiveSource(source);
     
     try {
@@ -45,72 +48,45 @@ const DataUpload = ({ onDataProcessed }) => {
           break;
           
         case 'cloud':
-          // Cloud service data processing would go here
           throw new Error('Cloud service integration coming soon');
           
         default:
           throw new Error('Unsupported data source type');
       }
 
-      // Validate and analyze the data
-      if (!result || !result.data || !Array.isArray(result.data) || result.data.length === 0) {
-        throw new Error('Invalid data format or empty dataset');
+      // Process data using the context's processData method
+      const processResult = await processData(result.data);
+      
+      if (!processResult.success) {
+        throw new Error(processResult.error);
       }
 
-      // Generate analysis
-      const analysis = {
-        rowCount: result.data.length,
-        columns: Object.keys(result.data[0]),
-        summary: {
-          numericColumns: Object.keys(result.data[0]).filter(
-            key => typeof result.data[0][key] === 'number'
-          ),
-          dateColumns: Object.keys(result.data[0]).filter(
-            key => !isNaN(Date.parse(result.data[0][key]))
-          ),
-          categoricalColumns: Object.keys(result.data[0]).filter(
-            key => typeof result.data[0][key] === 'string' && 
-                  !isNaN(Date.parse(result.data[0][key]))
-          )
-        },
-        metadata: {
-          source: source.type,
-          timestamp: new Date().toISOString(),
-          ...(result.metadata || {})
-        }
-      };
-
-      // If API source with auto-refresh, set up the refresh interval
+      // Handle API auto-refresh
       if (source.type === 'api' && source.config?.autoRefresh) {
         const intervalId = setInterval(() => {
           handleDataSourceSelect(source);
         }, source.config.refreshInterval * 1000);
-
-        // Store interval ID for cleanup
-        analysis.metadata.refreshIntervalId = intervalId;
+        setActiveSource(prev => ({ ...prev, intervalId }));
       }
 
-      // Pass data and analysis to parent
-      onDataProcessed({
-        data: result.data,
-        analysis
-      });
-    } catch (error) {
-      setUploadError(error.message);
-      setActiveSource(null);
-    } finally {
-      setIsLoading(false);
+    } catch (err) {
+      console.error('Data processing failed:', err);
     }
   };
 
   // Cleanup function for auto-refresh intervals
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
-      if (activeSource?.type === 'api' && activeSource.config?.autoRefresh) {
-        clearInterval(activeSource.metadata?.refreshIntervalId);
+      if (activeSource?.intervalId) {
+        clearInterval(activeSource.intervalId);
       }
     };
   }, [activeSource]);
+
+  useEffect(() => {
+    console.log('DataUpload rendered');
+    console.log(isLoading);
+  }, [isLoading, error]);
 
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4, p: 2 }}>
@@ -123,30 +99,35 @@ const DataUpload = ({ onDataProcessed }) => {
           connect to an API, or access cloud storage services.
         </Typography>
 
-        {/* Main data source selector */}
-        <DataSourceSelector onDataProcessed={onDataProcessed} onDataSourceSelect={handleDataSourceSelect} />
-
-        {/* Loading indicator */}
+        {/* Progress indicator */}
         {isLoading && (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            py: 3 
-          }}>
-            <CircularProgress />
+          <Box sx={{ my: 2 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              {processingStatus.stage}... ({Math.round(processingStatus.progress)}%)
+            </Typography>
+            <LinearProgress 
+              variant="determinate" 
+              value={processingStatus.progress} 
+            />
           </Box>
+        )}
+
+        {/* Main data source selector */}
+        {!isLoading && (
+          <DataSourceSelector 
+            onDataSourceSelect={handleDataSourceSelect}
+            disabled={isLoading}
+          />
         )}
         
         {/* Error display */}
-        {uploadError && (
+        {error && (
           <Alert 
             severity="error" 
             sx={{ mt: 2 }}
-            onClose={() => setUploadError(null)}
           >
             <AlertTitle>Upload Failed</AlertTitle>
-            {uploadError}
+            {error}
           </Alert>
         )}
       </Paper>

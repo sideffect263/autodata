@@ -103,6 +103,7 @@ const Sidebar = ({ currentView, onViewChange, dataLoaded }) => {
           edge="start"
           onClick={handleDrawerToggle}
           sx={{ ml: 2, mt: 2 }}
+          style={{display:"flex", alignItems:'flex-start', top: "100px"}}
         >
           <MenuIcon />
         </IconButton>
@@ -122,7 +123,10 @@ const Sidebar = ({ currentView, onViewChange, dataLoaded }) => {
             boxSizing: 'border-box',
             backgroundColor: 'background.paper',
             borderRight: '1px solid',
-            borderColor: 'divider'
+            borderColor: 'divider',
+            justifyContent: 'flex-start',
+            display: 'flex',
+            top: "100px"
           },
         }}
       >

@@ -17,14 +17,15 @@ const ChartControls = ({
   type = 'bar', 
   columns = [], 
   selected = { x: '', y: '', group: '' }, 
-  onChange 
+  onChange,
+  analysis 
 }) => {
   if (!columns || columns.length === 0) return null;
 
   const handleChange = (field) => (event) => {
     onChange({
       ...selected,
-      [field]: event.target.value || ''  // Ensure empty string instead of undefined
+      [field]: event.target.value
     });
   };
 
@@ -36,7 +37,7 @@ const ChartControls = ({
   };
 
   return (
-    <Card sx={{ width: 300 }}>
+    <Card sx={{ width: '100%' }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
           Chart Controls
@@ -99,7 +100,7 @@ const ChartControls = ({
               <FormControlLabel
                 control={
                   <Switch
-                    checked={!!selected.stacked}  // Convert to boolean
+                    checked={Boolean(selected.stacked)}
                     onChange={handleSwitchChange('stacked')}
                   />
                 }
@@ -113,7 +114,7 @@ const ChartControls = ({
               <FormControlLabel
                 control={
                   <Switch
-                    checked={!!selected.smooth}  // Convert to boolean
+                    checked={Boolean(selected.smooth)}
                     onChange={handleSwitchChange('smooth')}
                   />
                 }
@@ -127,7 +128,7 @@ const ChartControls = ({
               <FormControlLabel
                 control={
                   <Switch
-                    checked={!!selected.showTrendline}  // Convert to boolean
+                    checked={Boolean(selected.showTrendline)}
                     onChange={handleSwitchChange('showTrendline')}
                   />
                 }

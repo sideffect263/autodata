@@ -10,18 +10,12 @@ import {
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { processFile } from '../../utils/fileHandlers';
+import { useData } from '../../contexts/DataContext';
 
-const DropZone = ({ onDataProcessed }) => {
+const DropZone = () => {
+  const { processData, processingStatus, error: contextError } = useData();
   const [isDragging, setIsDragging] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState(null);
-  const [progress, setProgress] = useState(0);
-
-  const resetState = () => {
-    setError(null);
-    setProgress(0);
-    setIsProcessing(false);
-  };
+  const [localError, setLocalError] = useState(null);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
@@ -36,48 +30,42 @@ const DropZone = ({ onDataProcessed }) => {
   const handleDrop = useCallback(async (e) => {
     e.preventDefault();
     setIsDragging(false);
-    resetState();
+    setLocalError(null);
     
     const files = Array.from(e.dataTransfer.files);
     
     if (files.length > 1) {
-      setError('Please upload only one file at a time');
+      setLocalError('Please upload only one file at a time');
       return;
     }
 
     const file = files[0];
     await handleFileProcess(file);
-  }, []);
+  }, [processData]);
 
   const handleFileSelect = useCallback(async (e) => {
+    console.log('File selected');
     const file = e.target.files?.[0];
     if (file) {
-      resetState();
+      setLocalError(null);
       await handleFileProcess(file);
     }
-  }, []);
+  }, [processData]);
 
   const handleFileProcess = async (file) => {
-    setIsProcessing(true);
-    
     try {
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setProgress(prev => (prev >= 90 ? 90 : prev + 10));
-      }, 200);
-
-      const result = await processFile(file);
-      
-      clearInterval(progressInterval);
-      setProgress(100);
-      
-      onDataProcessed(result);
+      const processed = await processFile(file);
+      if (processed) {
+        await processData(processed.data);
+      }
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsProcessing(false);
+      setLocalError(err.message);
     }
   };
+
+  const error = localError || contextError;
+  const isProcessing = processingStatus.isProcessing;
+  const progress = processingStatus.progress;
 
   return (
     <Paper
@@ -111,7 +99,7 @@ const DropZone = ({ onDataProcessed }) => {
         <Box sx={{ width: '100%', maxWidth: 400, textAlign: 'center' }}>
           <CircularProgress sx={{ mb: 2 }} />
           <Typography variant="h6" gutterBottom>
-            Processing file...
+            {processingStatus.stage || 'Processing file...'}
           </Typography>
           <LinearProgress 
             variant="determinate" 
@@ -119,7 +107,7 @@ const DropZone = ({ onDataProcessed }) => {
             sx={{ mb: 1 }} 
           />
           <Typography variant="body2" color="text.secondary">
-            {progress}% complete
+            {Math.round(progress)}% complete
           </Typography>
         </Box>
       ) : (
@@ -141,7 +129,7 @@ const DropZone = ({ onDataProcessed }) => {
         <Alert 
           severity="error" 
           sx={{ mt: 2, width: '100%', maxWidth: 400 }}
-          onClose={() => setError(null)}
+          onClose={() => setLocalError(null)}
         >
           {error}
         </Alert>

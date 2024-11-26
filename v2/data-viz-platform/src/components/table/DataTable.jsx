@@ -19,7 +19,9 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   FileDownload as ExportIcon,
@@ -28,10 +30,11 @@ import {
   Clear as ClearIcon
 } from '@mui/icons-material';
 
-const DataTable = ({ data, title }) => {
+const DataTable = ({ data, title, isMobile = false }) => {
+  const theme = useTheme();
   // State for table functionality
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(isMobile ? 5 : 10);
   const [orderBy, setOrderBy] = useState('');
   const [order, setOrder] = useState('asc');
   const [searchTerm, setSearchTerm] = useState('');
@@ -179,9 +182,9 @@ const DataTable = ({ data, title }) => {
   return (
     <Paper sx={{ width: '100%', overflow: 'hidden' }}>
       {/* Table Controls */}
-      <Box sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+      <Box sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
         <TextField
-          size="small"
+          size={isMobile ? 'small' : 'medium'}
           placeholder="Search data..."
           value={searchTerm}
           onChange={(e) => {
@@ -196,9 +199,10 @@ const DataTable = ({ data, title }) => {
               </IconButton>
             )
           }}
+          sx={{ width: isMobile ? '100%' : 'auto' }}
         />
 
-        <FormControl size="small" sx={{ minWidth: 200 }}>
+        <FormControl size={isMobile ? 'small' : 'medium'} sx={{ minWidth: isMobile ? '100%' : 200 }}>
           <InputLabel>Visible Columns</InputLabel>
           <Select
             multiple
@@ -228,7 +232,7 @@ const DataTable = ({ data, title }) => {
       </Box>
 
       {/* Main Table */}
-      <TableContainer sx={{ maxHeight: 440 }}>
+      <TableContainer sx={{ maxHeight: isMobile ? 300 : 440 }}>
         <Table stickyHeader>
           <TableHead>
             <TableRow>
@@ -236,6 +240,10 @@ const DataTable = ({ data, title }) => {
                 <TableCell
                   key={column}
                   sortDirection={orderBy === column ? order : false}
+                  sx={{ 
+                    whiteSpace: 'nowrap',
+                    fontSize: isMobile ? '0.8rem' : '1rem'
+                  }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <TableSortLabel
@@ -246,11 +254,11 @@ const DataTable = ({ data, title }) => {
                       {column}
                     </TableSortLabel>
                     <TextField
-                      size="small"
+                      size={isMobile ? 'small' : 'medium'}
                       placeholder="Filter..."
                       value={filters[column] || ''}
                       onChange={(e) => handleFilterChange(column, e.target.value)}
-                      sx={{ width: 100 }}
+                      sx={{ width: isMobile ? 80 : 100 }}
                     />
                   </Box>
                 </TableCell>
@@ -263,7 +271,13 @@ const DataTable = ({ data, title }) => {
               .map((row, rowIndex) => (
                 <TableRow hover key={rowIndex}>
                   {selectedColumns.map((column) => (
-                    <TableCell key={column}>
+                    <TableCell 
+                      key={column}
+                      sx={{ 
+                        whiteSpace: 'nowrap',
+                        fontSize: isMobile ? '0.8rem' : '1rem'
+                      }}
+                    >
                       {columnTypes[column] === 'date'
                         ? new Date(row[column]).toLocaleDateString()
                         : row[column]?.toString() || ''}
@@ -277,13 +291,21 @@ const DataTable = ({ data, title }) => {
 
       {/* Pagination */}
       <TablePagination
-        rowsPerPageOptions={[5, 10, 25, 50]}
+        rowsPerPageOptions={isMobile ? [5, 10, 25] : [5, 10, 25, 50]}
         component="div"
         count={processedData.length}
         rowsPerPage={rowsPerPage}
         page={Math.min(page, Math.ceil(processedData.length / rowsPerPage) - 1)}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
+        sx={{
+          '& .MuiTablePagination-toolbar': {
+            flexWrap: 'wrap',
+            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-select, & .MuiTablePagination-actions': {
+              display: isMobile ? 'none' : 'block'
+            }
+          }
+        }}
       />
     </Paper>
   );
