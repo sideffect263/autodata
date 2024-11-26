@@ -101,9 +101,10 @@ const Sidebar = ({ currentView, onViewChange, dataLoaded }) => {
           color="inherit"
           aria-label="open drawer"
           edge="start"
+
           onClick={handleDrawerToggle}
-          sx={{ ml: 2, mt: 2 }}
-          style={{display:"flex", alignItems:'flex-start', top: "100px"}}
+          sx={{ ml: 1, mt: 11 }}
+          style={{display:"flex", alignItems:'flex-start' , position: "fixed", backgroundcolor: "rgba(229, 229, 229,0.6)", borderRadius: "20%", borderColor:"#14213d", borderWidth:"1px", borderStyle:"solid"}}
         >
           <MenuIcon />
         </IconButton>
