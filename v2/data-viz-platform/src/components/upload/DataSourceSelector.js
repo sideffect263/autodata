@@ -1,12 +1,12 @@
-
-
 // src/components/upload/DataSourceSelector.jsx
 import React, { useState } from 'react';
 import {
   Box,
   Tabs,
   Tab,
-  Alert
+  Alert,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   Upload as UploadIcon,
@@ -20,6 +20,8 @@ import CloudStorage from './datasource/CloudStorage';
 const DataSourceSelector = () => {
   const [sourceType, setSourceType] = useState('local');
   const [error, setError] = useState(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleSourceTypeChange = (_, newValue) => {
     setSourceType(newValue);
@@ -41,11 +43,12 @@ const DataSourceSelector = () => {
   };
 
   return (
-    <Box>
+    <Box sx={{ p: isMobile ? 1 : 2 }}>
       <Tabs
         value={sourceType}
         onChange={handleSourceTypeChange}
-        variant="fullWidth"
+        variant={isMobile ? 'scrollable' : 'fullWidth'}
+        scrollButtons={isMobile ? 'auto' : 'off'}
         sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
       >
         <Tab 
