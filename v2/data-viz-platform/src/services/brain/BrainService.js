@@ -78,42 +78,45 @@ class BrainService extends EventEmitter {
   /**
    * Run the complete analysis pipeline
    */
-  async runAnalysisPipeline(data, options) {
-    const analysis = {
-      timestamp: Date.now(),
-      metadata: {
-        rowCount: data.length,
-        approximateSize: this.memoryManager.approximateSize(data),
-        ...options
-      }
-    };
 
-    console.log('Running analysis pipeline...');
+async runAnalysisPipeline(data, options) {
+  const analysis = {
+    timestamp: Date.now(),
+    metadata: {
+      rowCount: data.length,
+      approximateSize: this.memoryManager.approximateSize(data),
+      ...options
+    }
+  };
 
-    // Analyze columns
-    analysis.columns = this.analyzeColumns(data);
+  // Analyze columns first
+  analysis.columns = this.analyzeColumns(data);
 
-    // Detect patterns using patternDetector instance
-    analysis.patterns = await this.patternDetector.analyzePatterns(data, analysis.columns);
+  // Find numeric columns for suggestions
+  const numericColumns = Object.entries(analysis.columns)
+    .filter(([_, info]) => info.type === 'numeric')
+    .map(([name]) => name);
 
-    // Generate insights
-    analysis.insights = this.generateInsights(data, analysis.columns, analysis.patterns);
+  // Add suggested metrics to metadata
+  analysis.metadata.suggestedMetrics = numericColumns;
+  analysis.metadata.primaryMetric = numericColumns[0] || 'value';
 
-    // Generate suggestions using visualizationSuggester instance
-    analysis.suggestions = await this.visualizationSuggester.generateSuggestions(
-      data,
-      analysis.columns,
-      analysis.patterns,
-      this.userPreferences
-    );
+  // Continue with the rest of the pipeline
+  analysis.patterns = await this.patternDetector.analyzePatterns(data, analysis.columns);
+  analysis.insights = this.generateInsights(data, analysis.columns, analysis.patterns);
+  
+  // Pass both data and columns to suggestion generation
+  analysis.suggestions = await this.visualizationSuggester.generateSuggestions(
+    data,
+    analysis.columns,
+    analysis.patterns,
+    this.userPreferences
+  );
 
-    // Add performance recommendations
-    analysis.performance = this.generatePerformanceRecommendations(data, analysis);
+  analysis.performance = this.generatePerformanceRecommendations(data, analysis);
 
-    console.log('Analysis pipeline completed:', analysis);
-
-    return analysis;
-  }
+  return analysis;
+}
 
   /**
    * Generate insights from analysis
