@@ -1,9 +1,10 @@
-import React from 'react';
+import React,{useState} from 'react';
 import { 
   ThemeProvider, 
   CssBaseline, 
   Box,
-  Alert
+  Alert,
+  
 } from '@mui/material';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { DataProvider, useData } from './contexts/DataContext';
@@ -19,8 +20,7 @@ import LoadingOverlay from './components/common/LoadingOverlay';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import introJs from 'intro.js';
 import 'intro.js/introjs.css';
-import { Upload } from '@mui/icons-material';
-import { element } from 'three/webgpu';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 const ViewContent = () => {
   const { 
@@ -32,6 +32,8 @@ const ViewContent = () => {
     processingStatus,
     isDataReady 
   } = useData();
+
+
 
   if (error) {
     return (
@@ -64,15 +66,11 @@ const ViewContent = () => {
     );
   }
 
-  console.log(currentView);
-
   switch (currentView) {
     case 'upload':
       return <DataUpload />;
     case 'd2':
-      return (
-          <ChartsView />
-      );
+      return <ChartsView />;
     case 'd3':
       return (
         <ErrorBoundary>
@@ -91,7 +89,7 @@ const ViewContent = () => {
           />
         </ErrorBoundary>
       );
-    case 'Settings':
+    case 'settings':
       return <SettingsView />;
     default:
       return <DataUpload />;
@@ -108,43 +106,46 @@ const AppContent = () => {
     hasData,
   } = useData();
 
+  // Detect screen size
+  const isMobile = useMediaQuery('(max-width:600px)');
+
   const tutorials = {
     upload: [
       { intro: "Welcome to the Upload Page!" },
       { element: ".upload", intro: "Click here to upload your data or use preloaded datasets." },
-      {element:".d2", intro:"Click here to go to 2D Charts Page"},
-      {element:".d3", intro:"Click here to go to 3D Visualizations Page"},
-      {element:".table", intro:"Click here to go to Table View Page"},
       { element: ".PreloadedDatasets", intro: "Select a preloaded dataset to quickly start analyzing." },
     ],
     d2: [
       { intro: "Welcome to the 2D Charts Page!" },
       { element: ".d2Chart", intro: "Visualize your data with interactive 2D charts." },
       { element: ".ChartControls", intro: "Use these controls to customize your charts." },
-      { element: ".chartType", intro: "Select a chart type to get started." },
     ],
     d3: [
       { intro: "Welcome to the 3D Visualizations Page!" },
       { element: ".d3Visualization", intro: "Explore advanced 3D visualizations of your data." },
       { element: ".Toolbar", intro: "Use these controls to interact with the 3D view." },
-      { element: ".autoSuggestions", intro: "Get suggestions for visualizing your data." },
-      { element: ".Settings", intro: "Customize your visualization settings for the 3D view." },
-
     ],
     table: [
       { intro: "Welcome to the Table View Page!" },
       { element: ".Table", intro: "View and analyze your data in a table format." },
     ],
-    Settings: [
+    settings: [
       { intro: "Welcome to the Settings Page!" },
       { element: ".ThemeToggle", intro: "Switch between light and dark themes here." },
       { element: ".Preferences", intro: "Adjust your preferences to enhance your experience." },
     ],
   };
 
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+
   const startTutorial = () => {
     const steps = tutorials[currentView] || [{ intro: "No tutorial available for this page." }];
 
+    if(isMobile && currentView === 'upload') {
+      setMobileOpen(true);
+
+    }
     introJs()
       .setOptions({
         steps,
@@ -152,15 +153,14 @@ const AppContent = () => {
         nextLabel: "Next →",
         prevLabel: "← Back",
         doneLabel: "Finish",
-        tooltipClass: 'customTooltip',
+        tooltipClass: isMobile ? 'introjs-tooltip-mobile' : 'introjs-tooltip-desktop',
         highlightClass: 'customHighlight',
         exitOnOverlayClick: false,
         showStepNumbers: true,
-        overlayOpacity: 0.5,
+        overlayOpacity: 0.7,
         scrollToElement: true,
         scrollTo: 'tooltip',
-        positionPrecedence: ['left', 'right', 'top', 'bottom'],
-         
+        positionPrecedence: ['bottom', 'top', 'right', 'left'], // Favor bottom/top on mobile
       })
       .start();
   };
@@ -170,6 +170,8 @@ const AppContent = () => {
       <CssBaseline />
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
         <Sidebar 
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
           currentView={currentView}
           onViewChange={setCurrentView}
           dataLoaded={hasData}

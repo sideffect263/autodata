@@ -24,10 +24,9 @@ import {
 
 const DRAWER_WIDTH = 240;
 
-const Sidebar = ({ currentView, onViewChange, dataLoaded }) => {
+const Sidebar = ({ currentView, onViewChange, dataLoaded, mobileOpen, setMobileOpen }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);

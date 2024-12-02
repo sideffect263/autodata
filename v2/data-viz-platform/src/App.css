@@ -139,3 +139,18 @@
   box-shadow: 0 0 16px rgba(33, 150, 243, 0.5); /* Glow effect */
   transition: all 0.3s ease;
 }
+
+/* Desktop Tooltip */
+.introjs-tooltip-desktop {
+  max-width: 400px;
+  font-size: 16px;
+  padding: 16px;
+}
+
+/* Mobile Tooltip */
+.introjs-tooltip-mobile {
+  max-width: 90%;
+  font-size: 14px;
+  padding: 12px;
+  margin: 0 auto;
+}
