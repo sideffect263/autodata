@@ -18,7 +18,6 @@ const CloudStorage = () => {
 
   const handleCloudServiceSelect = (service) => {
     // This would typically integrate with the service's SDK/API
-    console.log(`Selected cloud service: ${service.name}`);
     alert(`${service.name} integration coming soon`);
   };
 

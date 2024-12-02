@@ -41,13 +41,13 @@ const Sidebar = ({ currentView, onViewChange, dataLoaded }) => {
       disabled: false
     },
     {
-      id: '2d',
+      id: 'd2',
       label: '2D Charts',
       icon: ChartIcon,
       disabled: !dataLoaded
     },
     {
-      id: '3d',
+      id: 'd3',
       label: '3D Visualizations',
       icon: ThreeDIcon,
       disabled: !dataLoaded
@@ -59,12 +59,14 @@ const Sidebar = ({ currentView, onViewChange, dataLoaded }) => {
       disabled: !dataLoaded
     },
     {
-      id: 'settings',
+      id: 'Settings',
       label: 'Settings',
       icon: SettingsIcon,
       disabled: false
     }
   ];
+
+  
 
   const drawer = (
     <Box sx={{ overflow: 'auto', mt: 8 }}>
@@ -79,6 +81,8 @@ const Sidebar = ({ currentView, onViewChange, dataLoaded }) => {
                 selected={currentView === item.id}
                 onClick={() => !item.disabled && onViewChange(item.id)}
                 disabled={item.disabled}
+                className={item.id}
+
               >
                 <ListItemIcon>
                   <item.icon 
@@ -101,10 +105,10 @@ const Sidebar = ({ currentView, onViewChange, dataLoaded }) => {
           color="inherit"
           aria-label="open drawer"
           edge="start"
-
+          
           onClick={handleDrawerToggle}
           sx={{ ml: 1, mt: 11 }}
-          style={{display:"flex", alignItems:'flex-start' , position: "fixed", backgroundcolor: "rgba(229, 229, 229,0.6)", borderRadius: "20%", borderColor:"#14213d", borderWidth:"1px", borderStyle:"solid"}}
+          style={{display:"flex", alignItems:'flex-start' , position: "fixed", backgroundcolor: "rgba(229, 229, 229,0.6)", zIndex:10,borderRadius: "20%", borderColor:"#14213d", borderWidth:"1px", borderStyle:"solid"}}
         >
           <MenuIcon />
         </IconButton>

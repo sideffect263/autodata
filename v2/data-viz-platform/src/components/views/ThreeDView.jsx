@@ -1,157 +1,187 @@
 // src/components/views/ThreeDView/ThreeDView.jsx
-import React, { useState, useMemo, Suspense } from 'react';
-import {
-  Box,
-  Grid,
-  Paper,
-  IconButton,
-  Tooltip,
-  Alert,
-} from '@mui/material';
-import {
-  CameraAlt,
-  Refresh,
-  Save,
-} from '@mui/icons-material';
+import React, { Suspense, useMemo, useEffect, useCallback } from 'react';
+import { Box, Grid, Paper, IconButton, Tooltip, Alert, LinearProgress } from '@mui/material';
+import { CameraAlt, Refresh, Save } from '@mui/icons-material';
 import { Canvas } from '@react-three/fiber';
 import { 
   OrbitControls, 
   GizmoHelper, 
   GizmoViewport,
-  PerspectiveCamera,
+  Bounds 
 } from '@react-three/drei';
+import ControlPanel from './ThreeDView/ControlPanel';
+import Suggestions from './ThreeDView/Suggestions';
+import ErrorBoundary from '../common/ErrorBoundary';
+import { useThreeD, ThreeDProvider } from './ThreeDView/context/ThreeDContext';
+import LoadingSpinner from '../common/LoadingSpinner';
 
-// Import our components
-import { SceneSetup, LoadingOverlay } from './ThreeDView/SceneComponents';
-import { ControlPanel } from './ThreeDView/ControlPanel';
-import { Suggestions } from './ThreeDView/Suggestions';
-import ErrorBoundary from '../../components/common/ErrorBoundary';
+// Lazy load visualization components
+const ScatterPlot3D = React.lazy(() => import('../visualizations/3d/ScatterPlot3D'));
+const BarChart3D = React.lazy(() => import('../visualizations/3d/BarChart3D'));
+const SurfacePlot3D = React.lazy(() => import('../visualizations/3d/SurfacePlot3D'));
 
-// Import visualizations
-import ScatterPlot3D from '../visualizations/3d/ScatterPlot3D';
-import BarChart3D from '../visualizations/3d/BarChart3D';
-import SurfacePlot3D from '../visualizations/3d/SurfacePlot3D';
+// Memoized Scene component
+const Scene = React.memo(({ settings, children }) => {
+  const { showGrid, showAxes, enableShadows } = settings.display;
 
-// Import utilities and constants
-import { defaultSettings, generateSuggestions } from './ThreeDView/utils';
-
-const ThreeDView = ({ data, analysis }) => {
-  // State management
-  const [settings, setSettings] = useState(defaultSettings);
-  const [visualizationType, setVisualizationType] = useState('scatter');
-  const [columns, setColumns] = useState({ x: '', y: '', z: '' });
-  const [activeSuggestion, setActiveSuggestion] = useState(null);
-  const [error, setError] = useState(null);
-
-  // Analyze columns for numeric data
-  const columnAnalysis = useMemo(() => {
-    if (!data || data.length === 0) return null;
-
-    const analysis = {};
-    const columns = Object.keys(data[0]);
-
-    columns.forEach(column => {
-      const values = data.map(row => row[column]);
-      analysis[column] = {
-        type: typeof values[0],
-        isNumeric: values.every(v => typeof v === 'number'),
-        min: values.every(v => typeof v === 'number') ? Math.min(...values) : null,
-        max: values.every(v => typeof v === 'number') ? Math.max(...values) : null,
-        unique: new Set(values).size
-      };
-    });
-
-    return analysis;
-  }, [data]);
-
-  // Generate visualization suggestions
-  const suggestions = useMemo(() => 
-    generateSuggestions(data, columnAnalysis),
-    [data, columnAnalysis]
+  return (
+    <group>
+      <ambientLight intensity={0.5} />
+      <pointLight 
+        position={[10, 10, 10]} 
+        intensity={1} 
+        castShadow={enableShadows} 
+      />
+      <spotLight
+        position={[-10, 10, -10]}
+        angle={0.3}
+        penumbra={1}
+        intensity={1}
+        castShadow={enableShadows}
+      />
+      {showGrid && (
+        <gridHelper 
+          args={[20, 20]} 
+          position={[0, -0.01, 0]}
+          visible={showGrid}
+        />
+      )}
+      {showAxes && <axesHelper args={[5]} visible={showAxes} />}
+      <Bounds fit clip observe damping={6}>
+        {children}
+      </Bounds>
+    </group>
   );
+});
 
-  // Event handlers
-  const handleSettingChange = (category, setting, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [setting]: value
-      }
-    }));
-  };
+// Memoized Toolbar component
+const Toolbar = React.memo(({ isValid, isLoading, onScreenshot, onResetCamera, onSaveView }) => (
+  <Box
+    sx={{
+      position: 'absolute',
+      top: 16,
+      right: 16,
+      display: 'flex',
+      gap: 1,
+      backgroundColor: 'rgba(255,255,255,0.9)',
+      p: 1,
+      borderRadius: 1,
+      boxShadow: 1,
+      zIndex: 10
+    }}
+  >
+    {isValid ? (
+      <>
+        <Tooltip  title="Take Screenshot">
+          <IconButton size="small" onClick={onScreenshot} disabled={isLoading}>
+            <CameraAlt />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Reset Camera">
+          <IconButton size="small" onClick={onResetCamera} disabled={isLoading}>
+            <Refresh />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Save View">
+          <IconButton size="small" onClick={onSaveView} disabled={isLoading}>
+            <Save />
+          </IconButton>
+        </Tooltip>
+      </>
+    ) : (
+      <Box sx={{ display: 'flex', gap: 1 }}>
+        <IconButton size="small" disabled><CameraAlt /></IconButton>
+        <IconButton size="small" disabled><Refresh /></IconButton>
+        <IconButton size="small" disabled><Save /></IconButton>
+      </Box>
+    )}
+  </Box>
+));
 
-  const handleSuggestionClick = (suggestion) => {
-    setVisualizationType(suggestion.type);
-    setColumns(suggestion.columns);
-    setActiveSuggestion(suggestion);
-  };
-
-  const handleVisualizationChange = (type) => {
-    setVisualizationType(type);
-    setActiveSuggestion(null);
-    if (type !== visualizationType) {
-      setColumns({ x: '', y: '', z: '' });
-    }
-  };
-
-  const handleColumnChange = (axis, value) => {
-    setColumns(prev => ({
-      ...prev,
-      [axis]: value
-    }));
-    setActiveSuggestion(null);
-  };
-
-  const handleScreenshot = () => {
-    const canvas = document.querySelector('canvas');
-    if (canvas) {
-      const link = document.createElement('a');
-      link.download = `3d-visualization-${visualizationType}-${Date.now()}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    }
-  };
-
-  const handleResetCamera = () => {
-    setSettings(prev => ({
-      ...prev,
-      camera: defaultSettings.camera
-    }));
-  };
-
-  // Render the appropriate visualization
-  const renderVisualization = () => {
-    if (!columns.x || !columns.y || !columns.z) return null;
-
-    const props = {
-      data,
-      columns,
+// Visualization container component
+const VisualizationContainer = React.memo(({ data, visualizationType, columns, settings }) => {
+  const props = useMemo(() => ({
+    data,
+    columns,
+    settings: {
       pointSize: settings.display.pointSize,
       wireframe: settings.display.wireframe,
       opacity: settings.display.opacity,
-    };
+      colorScheme: settings.display.colorScheme
+    },
+    performanceSettings: settings.performance
+  }), [data, columns, settings]);
 
-    try {
-      switch (visualizationType) {
-        case 'scatter':
-          return <ScatterPlot3D {...props} />;
-        case 'bar':
-          return <BarChart3D {...props} />;
-        case 'surface':
-          return <SurfacePlot3D {...props} />;
-        default:
-          return null;
-      }
-    } catch (error) {
-      console.error('Error rendering visualization:', error);
-      setError(error.message);
+  switch (visualizationType) {
+    case 'scatter':
+      return <ScatterPlot3D {...props} />;
+    case 'bar':
+      return <BarChart3D {...props} />;
+    case 'surface':
+      return <SurfacePlot3D {...props} />;
+    default:
       return null;
-    }
-  };
+  }
+});
 
-  // Show loading or error states
-  if (!data || data.length === 0) {
+// Main content component
+const ThreeDViewContent = React.memo(({ data }) => {
+  const {
+    visualizationType,
+    columns,
+    settings,
+    isLoading,
+    error,
+    isValid,
+    hasData,
+    handleSettingChange,
+    loadSuggestions
+  } = useThreeD();
+
+  // Load suggestions effect
+  useEffect(() => {
+    if (data && hasData) {
+      loadSuggestions();
+    }
+  }, [data, hasData, loadSuggestions]);
+
+  // Handlers
+  const handleScreenshot = useCallback(() => {
+    const canvas = document.querySelector('canvas');
+    if (canvas) {
+      const link = document.createElement('a');
+      link.download = `3d-viz-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+  }, []);
+
+  const handleResetCamera = useCallback(() => {
+    handleSettingChange('camera', 'position', [15, 15, 15]);
+    handleSettingChange('camera', 'target', [0, 0, 0]);
+  }, [handleSettingChange]);
+
+  const handleSaveView = useCallback(() => {
+    // Implement save functionality
+  }, []);
+
+  // Canvas configuration
+  const canvasConfig = useMemo(() => ({
+    shadows: settings.display.enableShadows,
+    dpr: settings.performance.pixelRatio,
+    gl: {
+      antialias: settings.display.antialias,
+      preserveDrawingBuffer: true
+    },
+    camera: {
+      position: settings.camera.position,
+      fov: settings.camera.fov,
+      near: settings.camera.near,
+      far: settings.camera.far
+    }
+  }), [settings]);
+
+  if (!hasData) {
     return (
       <Alert severity="info" sx={{ m: 2 }}>
         Please upload data to create 3D visualizations
@@ -159,118 +189,107 @@ const ThreeDView = ({ data, analysis }) => {
     );
   }
 
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ m: 2 }}>
+        {error}
+      </Alert>
+    );
+  }
+
   return (
     <Box sx={{ height: '100%', p: 2 }}>
-      <Grid container spacing={2}>
-        {/* Suggestions Section */}
-        {suggestions.length > 0 && (
-          <Grid item xs={12}>
-            <Suggestions
-              suggestions={suggestions}
-              activeSuggestion={activeSuggestion}
-              onSuggestionClick={handleSuggestionClick}
-            />
-          </Grid>
-        )}
+      {isLoading && (
+        <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }}>
+          <LinearProgress />
+        </Box>
+      )}
 
-        {/* Main 3D Viewport */}
-        <Grid item xs={12} md={9}>
+      <Grid container spacing={2}>
+        <Grid className='autoSuggestions' item xs={12}>
+          <Suggestions />
+        </Grid>
+
+        <Grid  item xs={12} md={9}>
           <Paper 
+          className='d3Visualization'
             elevation={3}
-            sx={{ 
-              height: '70vh', 
+            sx={{
+              height: '70vh',
               position: 'relative',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              bgcolor: settings.display.backgroundColor
             }}
           >
-            <ErrorBoundary>
-              <Canvas
-                shadows={settings.display.enableShadows}
-                dpr={settings.performance.pixelRatio}
-                gl={{ 
-                  antialias: settings.display.antialias,
-                  preserveDrawingBuffer: true
-                }}
-              >
-                <PerspectiveCamera
-                  makeDefault
-                  position={settings.camera.position}
-                  fov={settings.camera.fov}
-                  near={settings.camera.near}
-                  far={settings.camera.far}
-                />
-                
-                <Suspense fallback={<LoadingOverlay />}>
-                  <SceneSetup settings={settings}>
-                    {renderVisualization()}
-                  </SceneSetup>
-                </Suspense>
-                
-                <OrbitControls
-                  enableDamping={settings.controls.enableDamping}
-                  dampingFactor={settings.controls.dampingFactor}
-                  autoRotate={settings.controls.autoRotate}
-                  autoRotateSpeed={settings.controls.rotateSpeed}
-                  enableZoom={settings.controls.enableZoom}
-                  zoomSpeed={settings.controls.zoomSpeed}
-                />
-                
-                <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
-                  <GizmoViewport />
-                </GizmoHelper>
-              </Canvas>
-            </ErrorBoundary>
+            <Toolbar
+              isValid={isValid}
+              isLoading={isLoading}
+              onScreenshot={handleScreenshot}
+              onResetCamera={handleResetCamera}
+              onSaveView={handleSaveView}
+            />
 
-            {/* Toolbar */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 16,
-                right: 16,
-                display: 'flex',
-                gap: 1,
-                backgroundColor: 'rgba(255,255,255,0.9)',
-                p: 1,
-                borderRadius: 1,
-                boxShadow: 1
-              }}
-            >
-              <Tooltip title="Take Screenshot">
-                <IconButton size="small" onClick={handleScreenshot}>
-                  <CameraAlt />
-                </IconButton>
-              </Tooltip>
-              
-              <Tooltip title="Reset Camera">
-                <IconButton size="small" onClick={handleResetCamera}>
-                  <Refresh />
-                </IconButton>
-              </Tooltip>
-              
-              <Tooltip title="Save View">
-                <IconButton size="small">
-                  <Save />
-                </IconButton>
-              </Tooltip>
-            </Box>
+            {!isValid && !isLoading ? (
+              <Box sx={{ 
+                position: 'absolute', 
+                top: '50%', 
+                left: '50%', 
+                transform: 'translate(-50%, -50%)', 
+                zIndex: 1 
+              }}>
+                <Alert severity="info">
+                  Please select X, Y, and Z dimensions to create visualization
+                </Alert>
+              </Box>
+            ) : (
+              <ErrorBoundary>
+                <Canvas {...canvasConfig}>
+                  <Suspense fallback={null}>
+                    <Scene settings={settings}>
+                      {isValid && (
+                        <VisualizationContainer
+                          data={data}
+                          visualizationType={visualizationType}
+                          columns={columns}
+                          settings={settings}
+                        />
+                      )}
+                    </Scene>
+                  </Suspense>
+
+                  <OrbitControls
+                    enableDamping={settings.controls.enableDamping}
+                    dampingFactor={settings.controls.dampingFactor}
+                    autoRotate={settings.controls.autoRotate}
+                    autoRotateSpeed={settings.controls.rotateSpeed}
+                    enableZoom={settings.controls.enableZoom}
+                    zoomSpeed={settings.controls.zoomSpeed}
+                    enablePan={settings.controls.enablePan}
+                    panSpeed={settings.controls.panSpeed}
+                  />
+
+                  <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
+                    <GizmoViewport />
+                  </GizmoHelper>
+                </Canvas>
+              </ErrorBoundary>
+            )}
           </Paper>
         </Grid>
 
-        {/* Controls Panel */}
         <Grid item xs={12} md={3}>
-          <ControlPanel
-            visualizationType={visualizationType}
-            columns={columns}
-            settings={settings}
-            columnAnalysis={columnAnalysis}
-            onVisualizationChange={handleVisualizationChange}
-            onColumnChange={handleColumnChange}
-            onSettingChange={handleSettingChange}
-          />
+          <ControlPanel />
         </Grid>
       </Grid>
     </Box>
   );
-};
+});
 
-export default ThreeDView;
+// Main component with provider
+const ThreeDView = ({ data }) => (
+  <ThreeDProvider>
+    <ThreeDViewContent data={data} />
+  </ThreeDProvider>
+);
+
+export default React.memo(ThreeDView);

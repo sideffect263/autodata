@@ -57,3 +57,85 @@
     padding: 8px;
   }
 }
+
+/* Customize tooltip box */
+.introjs-tooltip {
+  background-color: #3f51b5; /* Matches your header theme */
+  color: white; /* Text color */
+  border-radius: 12px; /* Rounded corners */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Shadow for a modern look */
+  font-size: 16px;
+  padding: 16px;
+}
+
+/* Customize progress bar */
+.introjs-progress {
+  background-color: #e0e0e0;
+}
+
+.introjs-progressbar {
+  background-color: #2196f3; /* Match your theme's accent color */
+}
+
+/* Customize tooltip arrow */
+.introjs-tooltip .introjs-arrow {
+  border-top-color: #3f51b5; /* Tooltip arrow color */
+}
+
+/* Close button style */
+.introjs-tooltip .introjs-closeButton {
+  color: white;
+  font-size: 20px;
+}
+
+/* Navigation buttons */
+.introjs-button {
+  background-color: #2196f3;
+  color: white;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: bold;
+}
+
+.introjs-button:hover {
+  background-color: #1976d2;
+}
+
+/* Back button */
+.introjs-button.introjs-prevbutton {
+  background-color: transparent;
+  color: #2196f3;
+  border: 1px solid #2196f3;
+}
+
+.introjs-button.introjs-prevbutton:hover {
+  background-color: #2196f3;
+  color: white;
+}
+
+/* Highlighted element border */
+.introjs-helperLayer {
+  border: 2px solid #2196f3;
+  border-radius: 8px;
+  background-color: rgba(33, 150, 243, 0.1);
+}
+
+/* Tooltip animation */
+.introjs-tooltip {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.introjs-helperLayer {
+  box-shadow: 0 0 16px rgba(33, 150, 243, 0.5); /* Glow effect */
+  transition: all 0.3s ease;
+}

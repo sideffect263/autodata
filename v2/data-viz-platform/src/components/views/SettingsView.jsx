@@ -78,7 +78,7 @@ const SettingsView = () => {
   };
 
   const renderAppearanceSettings = () => (
-    <Grid container spacing={3}>
+    <Grid className='ThemeToggle' container spacing={3}>
       <Grid item xs={12}>
         <FormControl fullWidth>
           <InputLabel>Theme</InputLabel>
@@ -107,7 +107,7 @@ const SettingsView = () => {
   );
 
   const renderVisualizationSettings = () => (
-    <Grid container spacing={3}>
+    <Grid className='Preferences' container spacing={3}>
       <Grid item xs={12}>
         <FormControl fullWidth>
           <InputLabel>Default Chart Type</InputLabel>
@@ -170,12 +170,14 @@ const SettingsView = () => {
     {
       label: 'Appearance',
       icon: <Palette />,
-      content: renderAppearanceSettings()
+      content: renderAppearanceSettings(),
+      className:'ThemeToggle',
     },
     {
       label: 'Visualization',
       icon: <DataUsage />,
-      content: renderVisualizationSettings()
+      content: renderVisualizationSettings(),
+      className:'Preferences',
     },
     {
       label: 'Performance',
@@ -223,6 +225,7 @@ const SettingsView = () => {
         >
           {tabs.map((tab, index) => (
             <Tab
+            className={tab.className}
               key={index}
               icon={tab.icon}
               label={tab.label}

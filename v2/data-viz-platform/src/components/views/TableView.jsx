@@ -17,6 +17,7 @@ const TableView = ({ data, analysis }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+
   // Calculate additional statistics for the data overview
   const statistics = useMemo(() => {
     if (!data || data.length === 0) return null;

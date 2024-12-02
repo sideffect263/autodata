@@ -1,6 +1,5 @@
-
 // src/components/views/ChartsView/ChartContext.jsx
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useData } from '../../../contexts/DataContext';
 import { useBrain } from '../../../hooks/useBrain';
 
@@ -40,48 +39,90 @@ export const ChartProvider = ({ children }) => {
   const [localError, setLocalError] = useState(null);
 
   // Get filtered suggestions
-  const currentSuggestions = suggestions.filter(
-    suggestion => !currentChart || suggestion.visualization.type === currentChart
-  );
+  const currentSuggestions = suggestions?.filter(
+    suggestion => !currentChart || suggestion.visualization?.type === currentChart
+  ) || [];
+
+  // Reset selected columns when data changes
+  useEffect(() => {
+    console.log('Data changed:', data);
+    console.log('Selected columns:', Object.keys(data[0]));
+    if (data && data.length > 0) {
+      const columns = Object.keys(data[0]);
+      setSelectedColumns(prev => ({
+        ...prev,
+        x: columns[0] || '',
+        y: columns[1] || '',
+        group: ''
+      }));
+    }
+  }, [data]);
 
   const handleChartTypeChange = useCallback((newType) => {
+    if (!newType) return;
+    
     setCurrentChart(newType);
     setActiveSuggestion(null);
-    setSelectedColumns(prev => ({
-      ...prev,
-      x: '',
-      y: '',
-      group: ''
-    }));
+    
+    // Only reset columns if they're not compatible with new chart type
+    if (newType === 'pie') {
+      setSelectedColumns(prev => ({
+        ...prev,
+        group: ''
+      }));
+    }
+    
     updatePreferences(new Map([['preferredChartType', newType]]));
   }, [updatePreferences]);
-
   const handleSuggestionClick = useCallback((suggestion) => {
-    setCurrentChart(suggestion.visualization.type);
-    setSelectedColumns(prev => ({
-      ...prev,
-      ...suggestion.visualization.config
-    }));
+
+    console.log('Suggestion clicked:', suggestion);
+    if (!suggestion || !suggestion.visualization) return;
+  
+    const { type, config } = suggestion.visualization;
+  
+  
+    setCurrentChart(type);
+  
+    // For pie charts, handle count differently
+    const newColumns = {
+      x: config.x || config.dimension || '', // Add support for dimension property
+      y: type === 'pie' ? 'count' : (config.y || config.value || 'count'), // Add support for value property
+      group: config.group || '',
+      stacked: !!config.stacked,
+      smooth: !!config.smooth,
+      showTrendline: !!config.showTrendline
+    };
+  
+  
+    setSelectedColumns(newColumns);
     setActiveSuggestion(suggestion);
+  
+    // Update preferences with the correct configuration
     updatePreferences(new Map([
       ['lastUsedSuggestion', suggestion.id],
-      ['preferredChartType', suggestion.visualization.type]
+      ['preferredChartType', type],
+      ['selectedColumns', newColumns]
     ]));
   }, [updatePreferences]);
-
+  
   const handleColumnChange = useCallback((newColumns) => {
+    if (!newColumns) return;
+
     setSelectedColumns(newColumns);
     setActiveSuggestion(null);
 
-    const columnInsights = newColumns.x && newColumns.y ? 
-      getInsightsForColumn(newColumns.x).concat(getInsightsForColumn(newColumns.y)) :
-      [];
+    // Only update preferences if we have valid columns
+    if (newColumns.x && newColumns.y) {
+      const columnInsights = getInsightsForColumn(newColumns.x)
+        .concat(getInsightsForColumn(newColumns.y));
 
-    if (columnInsights.length > 0) {
-      updatePreferences(new Map([
-        ['selectedColumns', [newColumns.x, newColumns.y]],
-        ['columnInsights', columnInsights]
-      ]));
+      if (columnInsights.length > 0) {
+        updatePreferences(new Map([
+          ['selectedColumns', [newColumns.x, newColumns.y]],
+          ['columnInsights', columnInsights]
+        ]));
+      }
     }
   }, [getInsightsForColumn, updatePreferences]);
 
@@ -95,6 +136,7 @@ export const ChartProvider = ({ children }) => {
     analysis,
     error: brainError || localError,
     isLoading: brainLoading,
+    availableColumns: data ? Object.keys(data[0] || {}) : [],
 
     // Actions
     setCurrentChart: handleChartTypeChange,

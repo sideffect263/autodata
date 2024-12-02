@@ -25,7 +25,6 @@ const DataSourceSelector = () => {
 
   const handleSourceTypeChange = (_, newValue) => {
     setSourceType(newValue);
-    console.log(`Selected source type: ${newValue}`);
     setError(null);
   };
 

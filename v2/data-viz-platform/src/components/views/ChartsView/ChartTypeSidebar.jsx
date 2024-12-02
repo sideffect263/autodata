@@ -32,7 +32,7 @@ const ChartTypeSidebar = () => {
 
   return (
     <>
-      <Paper sx={{ p: 2, mb: 2 }}>
+      <Paper className='chartType' sx={{ p: 2, mb: 2 }}>
         <Typography variant="h6" gutterBottom>
           Chart Types
         </Typography>
@@ -56,7 +56,7 @@ const ChartTypeSidebar = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <LightbulbIcon color="primary" sx={{ mr: 1 }} />
             <Typography variant="h6">
-              AI Suggestions  
+              Auto Suggestions  
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>

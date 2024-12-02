@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 const defaultSettings = {
   cameraPosition: [15, 15, 15],
-  fov: 75,
+  fov: 10,
   autoRotate: false,
   rotationSpeed: 1,
   enableDamping: true,

@@ -1,617 +1,290 @@
 // src/services/brain/analyzers/visualizationSuggester.js
+import { categoricalRules } from './rules/categoricalRules';
+import { timeSeriesRules } from './rules/timeSeriesRules';
+import { relationshipRules } from './rules/relationshipRules';
+import { numericalRules3D } from './rules/numerical3DRules';
 
 export class VisualizationSuggester {
   constructor() {
+    this.initialized = false;
     this.suggestions = [];
     this.rules = new Map();
     this.userPreferences = new Map();
+    this.currentData = null;
+    this.currentColumns = null;
+    
+    this.settings = {
+      minConfidenceScore: 0.6,
+      maxSuggestionsPerType: 3,
+      maxTotalSuggestions: 10,
+      complexityPenalty: 0.1,
+      dimensionalityBonus: 0.1
+    };
+
+    // Initialize rules in constructor
     this.initializeRules();
   }
 
-  /**
-   * Initialize core visualization rules and scoring criteria
-   */
   initializeRules() {
-    // Single-column visualization rules
-    this.rules.set('numeric', [
-      {
-        type: 'histogram',
-        score: 0.8,
-        title: 'Distribution Analysis',
-        description: 'Analyze value distribution patterns',
-        conditions: (column) => column.stats.distinct > 10,
-        generate: (column) => ({
-          type: 'histogram',
-          config: {
-            x: column.name,
-            binCount: this.calculateOptimalBins(column.stats.distinct),
-            showMean: true,
-            showMedian: true
-          }
-        })
-      },
-      {
-        type: 'boxplot',
-        score: 0.75,
-        title: 'Statistical Summary',
-        description: 'View statistical distribution and outliers',
-        conditions: (column) => true,
-        generate: (column) => ({
-          type: 'boxplot',
-          config: {
-            x: column.name,
-            showOutliers: true,
-            showStats: true
-          }
-        })
-      },
-      {
-        type: 'density',
-        score: 0.7,
-        title: 'Density Distribution',
-        description: 'Smooth distribution visualization',
-        conditions: (column) => column.stats.distinct > 50,
-        generate: (column) => ({
-          type: 'density',
-          config: {
-            x: column.name,
-            smoothing: 'auto'
-          }
-        })
-      }
-    ]);
-
-    // Categorical data rules
-    this.rules.set('categorical', [
-      {
-        type: 'bar',
-        score: 0.9,
-        title: 'Category Comparison',
-        description: 'Compare frequencies across categories',
-        conditions: (column) => column.stats.distinct <= 20,
-        generate: (column) => ({
-          type: 'bar',
-          config: {
-            x: column.name,
-            y: 'count',
-            sort: 'descending'
-          }
-        })
-      },
-      {
-        type: 'pie',
-        score: 0.7,
-        title: 'Category Distribution',
-        description: 'Show proportion of each category',
-        conditions: (column) => column.stats.distinct <= 10,
-        generate: (column) => ({
-          type: 'pie',
-          config: {
-            dimension: column.name,
-            showPercentage: true,
-            minSlice: 0.02
-          }
-        })
-      },
-      {
-        type: 'treemap',
-        score: 0.6,
-        title: 'Hierarchical View',
-        description: 'Visualize category hierarchies',
-        conditions: (column) => column.stats.distinct > 10 && column.stats.distinct <= 30,
-        generate: (column) => ({
-          type: 'treemap',
-          config: {
-            dimension: column.name,
-            showValues: true
-          }
-        })
-      }
-    ]);
-
-    // Time series rules
-    this.rules.set('date', [
-      {
-        type: 'line',
-        score: 0.9,
-        title: 'Trend Analysis',
-        description: 'Track changes over time',
-        conditions: (column) => true,
-        generate: (column, metadata) => ({
-          type: 'line',
-          config: {
-            x: column.name,
-            y: metadata.suggestedMetric,
-            interpolation: 'monotone',
-            showTrend: true
-          }
-        })
-      },
-      {
-        type: 'area',
-        score: 0.8,
-        title: 'Cumulative Trend',
-        description: 'View cumulative changes over time',
-        conditions: (column, metadata) => metadata.isCumulative,
-        generate: (column, metadata) => ({
-          type: 'area',
-          config: {
-            x: column.name,
-            y: metadata.suggestedMetric,
-            stacked: true
-          }
-        })
-      }
-    ]);
-
-    // Multi-column relationship rules
-    this.rules.set('relationship', [
-      {
-        type: 'scatter',
-        score: 0.85,
-        title: 'Correlation Analysis',
-        description: 'Explore relationships between variables',
-        conditions: (columns) => 
-          columns.every(col => col.type === 'numeric') && 
-          columns.length === 2,
-        generate: (columns) => ({
-          type: 'scatter',
-          config: {
-            x: columns[0].name,
-            y: columns[1].name,
-            showTrendline: true,
-            showCorrelation: true
-          }
-        })
-      },
-      {
-        type: 'heatmap',
-        score: 0.8,
-        title: 'Correlation Matrix',
-        description: 'View relationships among multiple variables',
-        conditions: (columns) => 
-          columns.every(col => col.type === 'numeric') && 
-          columns.length > 2,
-        generate: (columns) => ({
-          type: 'heatmap',
-          config: {
-            dimensions: columns.map(col => col.name),
-            showValues: true,
-            colorScale: 'diverging'
-          }
-        })
-      }
-    ]);
+    this.rules.set('categorical', categoricalRules);
+    this.rules.set('timeSeries', timeSeriesRules);
+    this.rules.set('relationship', relationshipRules);
+    this.rules.set('3d-numeric', numericalRules3D);
   }
 
-  /**
-   * Generate visualization suggestions based on data analysis
-   */
-  async generateSuggestions(data, columns, patterns) {
+  async initialize(options = {}) {
+    if (this.initialized) return;
+
     try {
-      this.suggestions = [];
+      this.settings = {
+        ...this.settings,
+        ...options
+      };
 
-      // Single column visualizations
-      for (const [columnName, columnInfo] of Object.entries(columns)) {
-        this.suggestions.push(...this.generateColumnSuggestions(columnInfo));
-      }
-
-      // Relationship visualizations
-      this.suggestions.push(...this.generateRelationshipSuggestions(columns, patterns));
-
-      // Time series visualizations
-      if (patterns.timeSeries?.length > 0) {
-        this.suggestions.push(...this.generateTimeSeriesSuggestions(patterns.timeSeries));
-      }
-
-      // Distribution-based visualizations
-      if (patterns.distributions?.length > 0) {
-        this.suggestions.push(...this.generateDistributionSuggestions(patterns.distributions));
-      }
-
-      // Apply user preferences
-      this.applyUserPreferences();
-
-      // Sort by final score
-      this.suggestions.sort((a, b) => b.finalScore - a.finalScore);
-
-      return this.suggestions;
+      this.initialized = true;
     } catch (error) {
-      console.error('Error generating visualization suggestions:', error);
+      console.error('VisualizationSuggester initialization failed:', error);
       throw error;
     }
   }
 
-  /**
-   * Generate suggestions for a single column
-   */
-  generateColumnSuggestions(columnInfo) {
-    const suggestions = [];
-    const rules = this.rules.get(columnInfo.type) || [];
-
-    for (const rule of rules) {
-      if (rule.conditions(columnInfo)) {
-        suggestions.push({
-          id: `${rule.type}-${columnInfo.name}`,
-          type: rule.type,
-          title: `${rule.title}: ${columnInfo.name}`,
-          description: rule.description,
-          baseScore: rule.score,
-          relevance: this.calculateRelevance(columnInfo, rule),
-          visualization: rule.generate(columnInfo),
-          metadata: {
-            column: columnInfo.name,
-            complexity: this.calculateComplexity(rule.type),
-            interactivity: this.getInteractivityOptions(rule.type)
-          }
-        });
+  async generateSuggestions(data, columns, patterns, preferences = new Map()) {
+    try {
+      if (!this.validateInput(data, columns)) {
+        throw new Error('Invalid input data or columns');
       }
-    }
 
-    return suggestions;
+      this.currentData = data;
+      this.currentColumns = columns;
+      this.userPreferences = preferences;
+
+      // Generate different types of suggestions
+      const suggestions = [
+        ...this.generateCategoricalSuggestions(),
+        ...this.generateNumericSuggestions(),
+        ...this.generateTimeSeriesSuggestions(),
+        ...this.generate3DSuggestions()
+      ];
+
+      // Score and filter suggestions
+      return this.scoreSuggestions(suggestions, patterns);
+
+    } catch (error) {
+      console.error('Error generating suggestions:', error);
+      return [];
+    }
   }
 
-  /**
-   * Generate suggestions for relationships between columns
-   */
-  generateRelationshipSuggestions(columns, patterns) {
-    const suggestions = [];
-    const relationshipRules = this.rules.get('relationship') || [];
+ // In visualizationSuggester.js, update the generate method for bar charts
+generateCategoricalSuggestions() {
+  const suggestions = [];
+  const categoricalColumns = Object.entries(this.currentColumns)
+    .filter(([_, info]) => info?.type === 'categorical')
+    .map(([name]) => name);
 
-    // Handle correlations
-    if (patterns.correlations) {
-      for (const correlation of patterns.correlations) {
-        const relevantColumns = correlation.columns.map(col => columns[col]);
-        
-        for (const rule of relationshipRules) {
-          if (rule.conditions(relevantColumns)) {
-            suggestions.push({
-              id: `${rule.type}-${correlation.columns.join('-')}`,
-              type: rule.type,
-              title: `${rule.title}: ${correlation.columns.join(' vs ')}`,
-              description: `${rule.description} (${correlation.strength} correlation)`,
-              baseScore: rule.score * Math.abs(correlation.coefficient),
-              relevance: this.calculateRelevance(relevantColumns, rule),
-              visualization: rule.generate(relevantColumns),
-              metadata: {
-                columns: correlation.columns,
-                correlation: correlation.coefficient,
-                significance: correlation.significance
+  const numericColumns = Object.entries(this.currentColumns)
+    .filter(([_, info]) => info?.type === 'numeric')
+    .map(([name]) => name);
+
+  categoricalColumns.forEach(catColumn => {
+    numericColumns.forEach(numColumn => {
+      suggestions.push({
+        id: `bar-${catColumn}-${numColumn}`,
+        type: 'bar',
+        title: `${catColumn} by ${numColumn}`,
+        description: `Compare ${numColumn} across different ${catColumn} categories`,
+        columns: {
+          x: catColumn,
+          y: numColumn
+        },
+        visualization: {
+          type: 'bar',
+          config: {
+            x: catColumn,
+            y: numColumn
+          }
+        },
+        score: 0.8
+      });
+    });
+  });
+
+  return suggestions;
+}
+
+  generateNumericSuggestions() {
+    const suggestions = [];
+    const numericColumns = Object.entries(this.currentColumns)
+      .filter(([_, info]) => info?.type === 'numeric')
+      .map(([name]) => name);
+
+    if (numericColumns.length >= 2) {
+      const rules = this.rules.get('relationship') || [];
+      rules.forEach(rule => {
+        try {
+          // For each rule, create appropriate column combinations
+          if (rule.type === 'scatter') {
+            // For scatter plots, create pairs of columns
+            for (let i = 0; i < numericColumns.length - 1; i++) {
+              for (let j = i + 1; j < numericColumns.length; j++) {
+                const columnPair = [numericColumns[i], numericColumns[j]];
+                if (rule.conditions(columnPair)) {
+                  suggestions.push({
+                    id: `${rule.type}-${columnPair.join('-')}`,
+                    type: rule.type,
+                    title: `${rule.title}: ${columnPair.join(' vs ')}`,
+                    description: rule.description,
+                    columns: columnPair,
+                    visualization: rule.generate(columnPair, this.currentData),
+                    score: rule.score
+                  });
+                }
               }
-            });
+            }
+          } else if (rule.type === 'bubble' && numericColumns.length >= 3) {
+            // For bubble charts, create triplets of columns
+            for (let i = 0; i < numericColumns.length - 2; i++) {
+              for (let j = i + 1; j < numericColumns.length - 1; j++) {
+                for (let k = j + 1; k < numericColumns.length; k++) {
+                  const columnTriplet = [numericColumns[i], numericColumns[j], numericColumns[k]];
+                  if (rule.conditions(columnTriplet)) {
+                    suggestions.push({
+                      id: `${rule.type}-${columnTriplet.join('-')}`,
+                      type: rule.type,
+                      title: `${rule.title}: ${columnTriplet.join(', ')}`,
+                      description: rule.description,
+                      columns: columnTriplet,
+                      visualization: rule.generate(columnTriplet, this.currentData),
+                      score: rule.score
+                    });
+                  }
+                }
+              }
+            }
           }
+        } catch (error) {
+          console.warn('Failed to generate numeric suggestion:', error);
         }
-      }
+      });
     }
 
     return suggestions;
   }
 
-  /**
-   * Generate suggestions for time series patterns
-   */
-  generateTimeSeriesSuggestions(timeSeriesPatterns) {
+  generateTimeSeriesSuggestions() {
     const suggestions = [];
-    const timeSeriesRules = this.rules.get('date') || [];
+    const dateColumns = Object.entries(this.currentColumns)
+      .filter(([_, info]) => info?.type === 'date')
+      .map(([name]) => name);
 
-    for (const pattern of timeSeriesPatterns) {
-      for (const rule of timeSeriesRules) {
-        if (rule.conditions(pattern)) {
-          suggestions.push({
-            id: `${rule.type}-${pattern.dateColumn}-${pattern.valueColumn}`,
-            type: rule.type,
-            title: `${rule.title}: ${pattern.valueColumn} over time`,
-            description: this.generateTimeSeriesDescription(pattern),
-            baseScore: rule.score * pattern.confidence,
-            visualization: rule.generate(pattern),
-            metadata: {
-              timePattern: pattern,
-              recommendations: pattern.recommendations
+    const numericColumns = Object.entries(this.currentColumns)
+      .filter(([_, info]) => info?.type === 'numeric')
+      .map(([name]) => name);
+
+    const rules = this.rules.get('timeSeries') || [];
+
+    dateColumns.forEach(dateColumn => {
+      numericColumns.forEach(valueColumn => {
+        rules.forEach(rule => {
+          try {
+            if (rule.conditions([dateColumn, valueColumn])) {
+              suggestions.push({
+                id: `${rule.type}-${dateColumn}-${valueColumn}`,
+                type: rule.type,
+                title: `${rule.title}: ${valueColumn} over time`,
+                description: rule.description,
+                columns: [dateColumn, valueColumn],
+                visualization: rule.generate([dateColumn, valueColumn], this.currentData),
+                score: rule.score
+              });
             }
-          });
-        }
-      }
-    }
-
-    return suggestions;
-  }
-
-  /**
-   * Calculate visualization complexity
-   */
-  calculateComplexity(visType) {
-    const complexityScores = {
-      bar: 1,
-      pie: 1,
-      line: 2,
-      scatter: 2,
-      histogram: 2,
-      heatmap: 3,
-      treemap: 3,
-      boxplot: 3
-    };
-
-    return complexityScores[visType] || 2;
-  }
-
-  /**
-   * Get available interactivity options
-   */
-  getInteractivityOptions(visType) {
-    const baseOptions = ['tooltip', 'zoom', 'pan'];
-    const additionalOptions = {
-      scatter: ['brush', 'lasso', 'pointSelection'],
-      heatmap: ['cellSelection', 'rowColumnSelection'],
-      treemap: ['drilldown', 'nodeSelection']
-    };
-
-    return [...baseOptions, ...(additionalOptions[visType] || [])];
-  }
-
-  /**
-   * Calculate relevance score for a visualization
-   */
-  calculateRelevance(columnInfo, rule) {
-    let relevance = 1.0;
-
-    // Adjust based on data characteristics
-    if (Array.isArray(columnInfo)) {
-      // Multiple columns
-      relevance *= this.calculateMultiColumnRelevance(columnInfo, rule);
-    } else {
-      // Single column
-      relevance *= this.calculateSingleColumnRelevance(columnInfo, rule);
-    }
-
-    return Math.min(1, relevance);
-  }
-
-  /**
-   * Calculate relevance for a single column
-   */
-  calculateSingleColumnRelevance(columnInfo, rule) {
-    let relevance = 1.0;
-
-    // Adjust based on column type
-    switch (columnInfo.type) {
-      case 'numeric':
-        relevance *= this.calculateNumericColumnRelevance(columnInfo, rule);
-        break;
-      case 'categorical':
-        relevance *= this.calculateCategoricalColumnRelevance(columnInfo, rule);
-        break;
-      case 'date':
-        relevance *= this.calculateDateColumnRelevance(columnInfo, rule);
-        break;
-      default:
-        relevance *= 0.5; // Default to lower relevance for unknown types
-        break;
-    }
-
-    // Adjust based on other column characteristics
-    if (columnInfo.stats.distinct <= 10) {
-      relevance *= 0.8; // Lower relevance for low cardinality
-    }
-
-    if (columnInfo.nullCount / columnInfo.unique > 0.2) {
-      relevance *= 0.7; // Lower relevance for high null values
-    }
-
-    return relevance;
-  }
-
-  /**
-   * Calculate relevance for multiple columns
-   */
-  calculateMultiColumnRelevance(columns, rule) {
-    let relevance = 1.0;
-
-    // Adjust based on column types
-    const columnTypes = new Set(columns.map(col => col.type));
-    if (columnTypes.size === 1) {
-      // All columns are of the same type
-      switch (columnTypes.values().next().value) {
-        case 'numeric':
-          relevance *= this.calculateNumericColumnsRelevance(columns, rule);
-          break;
-        case 'categorical':
-          relevance *= this.calculateCategoricalColumnsRelevance(columns, rule);
-          break;
-        case 'date':
-          relevance *= this.calculateDateColumnsRelevance(columns, rule);
-          break;
-      }
-    } else {
-      // Mixed column types
-      relevance *= 0.7;
-    }
-
-    // Adjust based on number of columns
-    if (columns.length > 2) {
-      relevance *= 0.8; // Lower relevance for more than 2 columns
-    }
-
-    return relevance;
-  }
-
-  /**
-   * Calculate relevance for numeric columns
-   */
-  calculateNumericColumnRelevance(column, rule) {
-    let relevance = 1.0;
-
-    // Adjust based on cardinality
-    if (column.stats.distinct <= 10) {
-      relevance *= 0.6; // Lower relevance for low cardinality
-    } else if (column.stats.distinct <= 50) {
-      relevance *= 0.8; // Moderate relevance for medium cardinality
-    }
-
-    // Adjust based on null values
-    if (column.nullCount / column.unique > 0.2) {
-      relevance *= 0.7; // Lower relevance for high null values
-    }
-
-    return relevance;
-  }
-
-  /**
-   * Calculate relevance for categorical columns
-   */
-  calculateCategoricalColumnRelevance(column, rule) {
-    let relevance = 1.0;
-
-    // Adjust based on cardinality
-    if (column.stats.distinct <= 5) {
-      relevance *= 0.7; // Lower relevance for very low cardinality
-    } else if (column.stats.distinct <= 20) {
-      relevance *= 0.9; // Higher relevance for moderate cardinality
-    }
-
-    // Adjust based on null values
-    if (column.nullCount / column.unique > 0.2) {
-      relevance *= 0.7; // Lower relevance for high null values
-    }
-
-    return relevance;
-  }
-
-  /**
-   * Calculate relevance for date columns
-   */
-  calculateDateColumnRelevance(column, rule) {
-    let relevance = 1.0;
-
-    // Adjust based on null values
-    if (column.nullCount / column.unique > 0.2) {
-      relevance *= 0.7; // Lower relevance for high null values
-    }
-
-    return relevance;
-  }
-
-  /**
-   * Calculate relevance for multiple numeric columns
-   */
-  calculateNumericColumnsRelevance(columns, rule) {
-    let relevance = 1.0;
-
-    // Adjust based on cardinality
-    const distinctCounts = columns.map(col => col.stats.distinct);
-    const minDistinctCount = Math.min(...distinctCounts);
-    const maxDistinctCount = Math.max(...distinctCounts);
-    if (minDistinctCount <= 10 || maxDistinctCount <= 10) {
-      relevance *= 0.6; // Lower relevance for low cardinality
-    } else if (minDistinctCount <= 50 || maxDistinctCount <= 50) {
-            relevance *= 0.8; // Moderate relevance for medium cardinality
-    }
-
-    // Adjust based on null values
-    const nullRatios = columns.map(col => col.nullCount / col.unique);
-    const maxNullRatio = Math.max(...nullRatios);
-    if (maxNullRatio > 0.2) {
-      relevance *= 0.7; // Lower relevance for high null values
-    }
-
-    return relevance;
-  }
-
-  /**
-   * Calculate relevance for multiple categorical columns
-   */
-  calculateCategoricalColumnsRelevance(columns, rule) {
-    let relevance = 1.0;
-
-    // Adjust based on cardinality
-    const distinctCounts = columns.map(col => col.stats.distinct);
-    const maxDistinctCount = Math.max(...distinctCounts);
-    if (maxDistinctCount <= 5) {
-      relevance *= 0.7; // Lower relevance for very low cardinality
-    } else if (maxDistinctCount <= 20) {
-      relevance *= 0.9; // Higher relevance for moderate cardinality
-    }
-
-    // Adjust based on null values
-    const nullRatios = columns.map(col => col.nullCount / col.unique);
-    const maxNullRatio = Math.max(...nullRatios);
-    if (maxNullRatio > 0.2) {
-      relevance *= 0.7; // Lower relevance for high null values
-    }
-
-    return relevance;
-  }
-
-  /**
-   * Generate description for time series patterns
-   */
-  generateTimeSeriesDescription(pattern) {
-    const descriptionParts = [];
-    if (pattern.confidence > 0.8) {
-      descriptionParts.push('Highly confident');
-    } else if (pattern.confidence > 0.6) {
-      descriptionParts.push('Moderately confident');
-    } else {
-      descriptionParts.push('Low confidence');
-    }
-    descriptionParts.push('trend identified');
-    if (pattern.recommendations && pattern.recommendations.length > 0) {
-      descriptionParts.push(`with ${pattern.recommendations.length} recommendations`);
-    }
-
-    return descriptionParts.join(' ');
-  }
-
-  /**
-   * Apply user preferences to adjust scores and suggestions
-   */
-  applyUserPreferences() {
-    for (const suggestion of this.suggestions) {
-      if (this.userPreferences.has(suggestion.type)) {
-        const preference = this.userPreferences.get(suggestion.type);
-        suggestion.finalScore = suggestion.baseScore * preference.weight;
-      } else {
-        suggestion.finalScore = suggestion.baseScore;
-      }
-    }
-  }
-
-  /**
-   * Calculate the optimal number of bins for a histogram
-   */
-  calculateOptimalBins(distinctCount) {
-    return Math.max(10, Math.min(50, Math.ceil(Math.sqrt(distinctCount))));
-  }
-
-  /**
-   * Generate suggestions for distribution patterns
-   */
-  generateDistributionSuggestions(distributions) {
-    const suggestions = [];
-    for (const distribution of distributions) {
-      if (distribution.type === 'skewed') {
-        suggestions.push({
-          id: `distribution-skewed-${distribution.column}`,
-          type: 'boxplot',
-          title: `Skewness Analysis: ${distribution.column}`,
-          description: 'Highlight skewness in distribution',
-          baseScore: 0.8,
-          visualization: {
-            type: 'boxplot',
-            config: {
-              x: distribution.column,
-              highlightSkewness: true
-            }
-          },
-          metadata: {
-            distribution
+          } catch (error) {
+            console.warn(`Failed to generate time series suggestion for ${dateColumn}, ${valueColumn}:`, error);
           }
         });
-      }
-    }
+      });
+    });
+
     return suggestions;
+  }
+
+  generate3DSuggestions() {
+    const suggestions = [];
+    const numericColumns = Object.entries(this.currentColumns)
+      .filter(([_, info]) => info?.type === 'numeric')
+      .map(([name]) => name);
+
+    if (numericColumns.length >= 3) {
+      const rules = this.rules.get('3d-numeric') || [];
+      rules.forEach(rule => {
+        try {
+          for (let i = 0; i < numericColumns.length - 2; i++) {
+            for (let j = i + 1; j < numericColumns.length - 1; j++) {
+              for (let k = j + 1; k < numericColumns.length; k++) {
+                const columns = [numericColumns[i], numericColumns[j], numericColumns[k]];
+                if (rule.conditions(columns)) {
+                  suggestions.push({
+                    id: `${rule.type}-${columns.join('-')}`,
+                    type: rule.type,
+                    title: `${rule.title}: ${columns.join(', ')}`,
+                    description: rule.description,
+                    columns: columns,
+                    visualization: rule.generate(columns, this.currentData),
+                    score: rule.score,
+                    dimensions: 3
+                  });
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to generate 3D suggestion:', error);
+        }
+      });
+    }
+
+    return suggestions;
+  }
+
+  scoreSuggestions(suggestions) {
+    return suggestions
+      .map(suggestion => ({
+        ...suggestion,
+        finalScore: this.calculateSuggestionScore(suggestion)
+      }))
+      .filter(suggestion => suggestion.finalScore >= this.settings.minConfidenceScore)
+      .sort((a, b) => b.finalScore - a.finalScore)
+      .slice(0, this.settings.maxTotalSuggestions);
+  }
+
+ // Update this method in your VisualizationSuggester class
+calculateSuggestionScore(suggestion) {
+  const baseScore = suggestion.score || 0.5;
+  const complexity = suggestion.dimensions === 3 ? this.settings.complexityPenalty : 0;
+  const dimensionality = suggestion.dimensions === 3 ? this.settings.dimensionalityBonus : 0;
+  
+  // Fix preference handling
+  let preference = 0.5;
+  if (this.userPreferences && typeof this.userPreferences === 'object') {
+    preference = this.userPreferences[suggestion.type] || 0.5;
+  }
+
+  return Math.min(1, Math.max(0,
+    baseScore * 0.4 +
+    preference * 0.3 +
+    (1 - complexity) * 0.2 +
+    dimensionality * 0.1
+  ));
+}
+
+  validateInput(data, columns) {
+    return data && 
+           Array.isArray(data) && 
+           data.length > 0 && 
+           columns && 
+           Object.keys(columns).length > 0;
   }
 }
 
-  // Export singleton instance
-  export const visualizationSuggester = new VisualizationSuggester();
-  export default visualizationSuggester;
+export const visualizationSuggester = new VisualizationSuggester();
+export default visualizationSuggester;

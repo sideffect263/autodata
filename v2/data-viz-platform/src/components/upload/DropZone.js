@@ -44,7 +44,6 @@ const DropZone = () => {
   }, [processData]);
 
   const handleFileSelect = useCallback(async (e) => {
-    console.log('File selected');
     const file = e.target.files?.[0];
     if (file) {
       setLocalError(null);

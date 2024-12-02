@@ -4,7 +4,7 @@ import { brainService } from '../services/brain/BrainService';
 import { visualizationSuggester } from '../services/brain/analyzers/visualizationSuggester';
 
 export const useBrain = (data, options = {}) => {
-  // State management
+  // Core states
   const [analysis, setAnalysis] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [insights, setInsights] = useState([]);
@@ -13,47 +13,78 @@ export const useBrain = (data, options = {}) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [preferences, setPreferences] = useState(new Map());
 
-  // Refs for tracking state between renders and async operations
+  // Visualization specific states
+  const [dimensionality, setDimensionality] = useState(options.dimensionality || '2d');
+  const [visualizationConfig, setVisualizationConfig] = useState({
+    type: options.initialType || 'bar',
+    columns: { x: '', y: '', z: '', color: '', size: '', group: '' },
+    settings: {
+      // 2D settings
+      stacked: false,
+      smooth: false,
+      showTrendline: false,
+      // 3D settings
+      pointSize: 0.5,
+      colorScheme: 'default',
+      wireframe: false,
+      opacity: 1,
+      camera: {
+        position: [15, 15, 15],
+        fov: 100,
+        near: 0.1,
+        far: 1000,
+      },
+      controls: {
+        autoRotate: false,
+        enableDamping: true,
+        dampingFactor: 0.05,
+      }
+    }
+  });
+
+  // Refs for state management
   const dataRef = useRef(data);
   const analysisTimeoutRef = useRef(null);
   const processingQueueRef = useRef([]);
+  const isInitializedRef = useRef(false);
 
-  // Initialize brain service
-  useEffect(() => {
-    const initBrain = async () => {
-      try {
-        await brainService.initialize();
-      } catch (error) {
-        console.error('Brain initialization failed:', error);
-        setError('Failed to initialize analysis system');
+  // Data validation
+  const validateData = useCallback((dataToValidate) => {
+    if (!dataToValidate || !Array.isArray(dataToValidate) || dataToValidate.length === 0) {
+      return false;
+    }
+
+    // Additional validation for 3D data
+    if (dimensionality === '3d') {
+      const firstRow = dataToValidate[0];
+      const hasNumericColumns = Object.values(firstRow).some(value => {
+        const numericValue = parseFloat(value);
+        return !isNaN(numericValue);
+      });
+
+      if (!hasNumericColumns) {
+        setError('3D visualizations require numeric data');
+        return false;
       }
-    };
+    }
 
-    initBrain();
-
-    // Cleanup function
-    return () => {
-      if (analysisTimeoutRef.current) {
-        clearTimeout(analysisTimeoutRef.current);
-      }
-    };
-  }, []);
+    return true;
+  }, [dimensionality]);
 
   // Process data changes
   useEffect(() => {
-    if (!data || data.length === 0) {
+    if (!validateData(data)) {
       return;
     }
 
+    console.log('Data changed:', data);
     dataRef.current = data;
     analyzeData();
-  }, [data]);
+  }, [data, validateData]);
 
   // Main analysis function
   const analyzeData = useCallback(async () => {
-    if (isProcessing) {
-      // Queue analysis for later if currently processing
-      processingQueueRef.current.push(dataRef.current);
+    if (isProcessing || !validateData(dataRef.current)) {
       return;
     }
 
@@ -62,109 +93,93 @@ export const useBrain = (data, options = {}) => {
       setIsLoading(true);
       setError(null);
 
+      // Process data through brain service
       const result = await brainService.processData(dataRef.current, {
         ...options,
-        preferences: preferences
+        dimensionality,
+        preferences,
       });
 
-      // Update state with analysis results
-      setAnalysis(result);
-      setSuggestions(result.suggestions);
-      setInsights(result.insights);
+      if (!result) {
+        throw new Error('Brain service returned no results');
+      }
 
-      // Process next item in queue if any
-      if (processingQueueRef.current.length > 0) {
-        const nextData = processingQueueRef.current.shift();
-        analysisTimeoutRef.current = setTimeout(() => {
-          dataRef.current = nextData;
-          analyzeData();
-        }, 100);
+      // Get visualization suggestions
+      const visualizationResult = await visualizationSuggester.generateSuggestions(
+        dataRef.current,
+        result.columns,
+        result.patterns,
+        {
+          preferences,
+          dimensionality,
+        }
+      );
+
+      // Update states
+      setAnalysis(result);
+      setSuggestions(visualizationResult || []);
+      setInsights(result?.insights || []);
+
+      // Update visualization config if we have suggestions
+      if (visualizationResult?.length > 0) {
+        const bestSuggestion = visualizationResult[0];
+        setVisualizationConfig(prev => ({
+          ...prev,
+          ...bestSuggestion.visualization
+        }));
       }
 
     } catch (error) {
       console.error('Analysis failed:', error);
       setError(error.message || 'Analysis failed');
+      setSuggestions([]);
+      setInsights([]);
+      setAnalysis(null);
     } finally {
       setIsProcessing(false);
       setIsLoading(false);
     }
-  }, [isProcessing, options]);
+  }, [isProcessing, options, preferences, validateData, dimensionality]);
 
-  // Update user preferences
+  // Update preferences
   const updatePreferences = useCallback(async (newPreferences) => {
-    try {
-      setPreferences(new Map([...preferences, ...newPreferences]));
-      
-      // Update brain service preferences
-      await brainService.updatePreferences(newPreferences);
+    if (!newPreferences || !(newPreferences instanceof Map)) {
+      console.warn('Invalid preferences provided');
+      return;
+    }
 
-      // Regenerate suggestions if we have current analysis
-      if (analysis && !isProcessing) {
-        // Use visualizationSuggester instead of brainService directly
-        const updatedSuggestions = await visualizationSuggester.generateSuggestions(
+    try {
+      const updatedPreferences = new Map([...preferences, ...newPreferences]);
+      setPreferences(updatedPreferences);
+
+      if (dataRef.current && analysis) {
+        const visualizationResult = await visualizationSuggester.generateSuggestions(
           dataRef.current,
           analysis.columns,
           analysis.patterns,
-          new Map([...preferences, ...newPreferences])
+          {
+            preferences: updatedPreferences,
+            dimensionality
+          }
         );
-        setSuggestions(updatedSuggestions);
+
+        if (visualizationResult) {
+          setSuggestions(visualizationResult);
+        }
       }
     } catch (error) {
       console.error('Failed to update preferences:', error);
       setError('Failed to update preferences');
     }
-  }, [analysis, isProcessing, preferences]);
+  }, [analysis, preferences, dimensionality]);
 
-  // Get specific insights
-  const getInsightsForColumn = useCallback((columnName) => {
-    if (!analysis || !analysis.insights) return [];
-    return analysis.insights.filter(insight => 
-      insight.columns.includes(columnName)
-    );
-  }, [analysis]);
-
-  // Get visualization suggestions for specific types
-  const getSuggestionsForType = useCallback((type) => {
-    if (!suggestions) return [];
-    return suggestions.filter(suggestion => 
-      suggestion.visualization.type === type
-    );
-  }, [suggestions]);
-
-  // Reset analysis state
-  const resetAnalysis = useCallback(() => {
-    setAnalysis(null);
-    setSuggestions([]);
-    setInsights([]);
-    setError(null);
-    processingQueueRef.current = [];
-    if (analysisTimeoutRef.current) {
-      clearTimeout(analysisTimeoutRef.current);
-    }
-  }, []);
-
-  // Export data and analysis
-  const exportAnalysis = useCallback(() => {
-    if (!analysis) return null;
-    
-    return {
-      timestamp: new Date().toISOString(),
-      data: dataRef.current,
-      analysis: analysis,
-      suggestions: suggestions,
-      insights: insights
+  useEffect(() => {
+    return () => {
+      if (analysisTimeoutRef.current) {
+        clearTimeout(analysisTimeoutRef.current);
+      }
+      processingQueueRef.current = [];
     };
-  }, [analysis, suggestions, insights]);
-
-  // Save current state
-  const saveState = useCallback(async () => {
-    try {
-      await brainService.saveState();
-      return true;
-    } catch (error) {
-      console.error('Failed to save state:', error);
-      return false;
-    }
   }, []);
 
   return {
@@ -173,30 +188,37 @@ export const useBrain = (data, options = {}) => {
     suggestions,
     insights,
     
+    // Visualization state
+    visualizationConfig,
+    dimensionality,
+    
     // Status indicators
     isLoading,
     isProcessing,
     error,
+    isInitialized: isInitializedRef.current,
     
     // User preferences
     preferences,
+    
+    // Actions
     updatePreferences,
+    setDimensionality,
     
     // Utility functions
-    getInsightsForColumn,
-    getSuggestionsForType,
-    resetAnalysis,
-    exportAnalysis,
-    saveState,
-
-    // Analysis metadata
+    validateData,
+    
+    // Metadata
     metadata: analysis?.metadata || null,
     
     // Helper properties
-    hasData: !!data && data.length > 0,
+    hasData: validateData(dataRef.current),
     hasAnalysis: !!analysis,
     hasSuggestions: suggestions.length > 0,
-    hasInsights: insights.length > 0
+    hasInsights: insights.length > 0,
+    
+    // Direct setters (use with caution)
+    setError
   };
 };
 

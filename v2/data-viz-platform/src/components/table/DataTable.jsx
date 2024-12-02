@@ -202,28 +202,30 @@ const DataTable = ({ data, title, isMobile = false }) => {
           sx={{ width: isMobile ? '100%' : 'auto' }}
         />
 
-        <FormControl size={isMobile ? 'small' : 'medium'} sx={{ minWidth: isMobile ? '100%' : 200 }}>
-          <InputLabel>Visible Columns</InputLabel>
-          <Select
-            multiple
-            value={selectedColumns}
-            onChange={(e) => setSelectedColumns(e.target.value)}
-            renderValue={(selected) => (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {selected.map((value) => (
-                  <Chip key={value} label={value} size="small" />
-                ))}
-              </Box>
-            )}
-          >
-            {columns.map((column) => (
-              <MenuItem key={column} value={column}>
-                {column}
-              </MenuItem>
+<FormControl size={isMobile ? 'small' : 'medium'} sx={{ minWidth: isMobile ? '100%' : 200 }}>
+      <InputLabel shrink>Visible Columns</InputLabel>
+      <Select
+        multiple
+        value={selectedColumns}
+        onChange={(e) => setSelectedColumns(e.target.value)}
+        renderValue={(selected) => (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {selected.map((value) => (
+              <Chip key={value} label={value} size="small" />
             ))}
-          </Select>
-        </FormControl>
+          </Box>
+        )}
+        label="Visible Columns"
+      >
+        {columns.map((column) => (
+          <MenuItem key={column} value={column}>
+            {column}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
 
+    
         <Tooltip title="Export data">
           <IconButton onClick={handleExport}>
             <ExportIcon />

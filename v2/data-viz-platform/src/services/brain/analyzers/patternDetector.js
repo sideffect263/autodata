@@ -1,9 +1,5 @@
 // src/services/brain/analyzers/patternDetector.js
-import { 
-  calculateCorrelation, 
-  detectTrend, 
-  detectSeasonality 
-} from '../utils/statisticalUtils';
+import { calculateCorrelation, detectTrend, detectSeasonality } from '../utils/statisticalUtils';
 
 /**
  * PatternDetector Class
@@ -43,6 +39,16 @@ export class PatternDetector {
         dataSize: 0,
         processedColumns: []
       }
+    };
+  }
+
+  /**
+   * Initialize the detector with options
+   */
+  async initialize(options = {}) {
+    this.settings = {
+      ...this.settings,
+      ...options
     };
   }
 
@@ -103,22 +109,24 @@ export class PatternDetector {
   async detectCorrelations(data, columns) {
     const correlations = [];
     const numericColumns = this.getNumericColumns(columns);
-  
+
     for (let i = 0; i < numericColumns.length; i++) {
       for (let j = i + 1; j < numericColumns.length; j++) {
         try {
           const col1 = numericColumns[i];
           const col2 = numericColumns[j];
-  
+
           // Filter out rows where either value is NaN
-          const filteredData = data.filter(row => !isNaN(row[col1]) && !isNaN(row[col2]));
+          const filteredData = data.filter(row => 
+            !isNaN(row[col1]) && !isNaN(row[col2])
+          );
           const values1 = filteredData.map(row => row[col1]);
           const values2 = filteredData.map(row => row[col2]);
-  
+
           if (values1.length === 0 || values2.length === 0) continue;
-  
+
           const coefficient = await calculateCorrelation(values1, values2);
-          
+
           if (Math.abs(coefficient) >= this.settings.correlationThreshold) {
             correlations.push({
               columns: [col1, col2],
@@ -136,7 +144,7 @@ export class PatternDetector {
         }
       }
     }
-  
+
     return correlations;
   }
 
@@ -336,25 +344,6 @@ export class PatternDetector {
   }
 
   /**
-   * Prepare time series data
-   */
-  prepareTimeSeriesData(data, dateColumn, valueColumn) {
-    const pairs = data
-      .map(row => ({
-        date: new Date(row[dateColumn]),
-        value: parseFloat(row[valueColumn])
-      }))
-      .filter(pair => !isNaN(pair.date) && !isNaN(pair.value))
-      .sort((a, b) => a.date - b.date);
-
-    return {
-      valid: pairs.length >= 3,
-      dates: pairs.map(p => p.date),
-      values: pairs.map(p => p.value)
-    };
-  }
-
-  /**
    * Generate insights for time series
    */
   generateTimeSeriesInsights(trend, seasonality) {
@@ -377,6 +366,25 @@ export class PatternDetector {
     }
 
     return insights;
+  }
+
+  /**
+   * Prepare time series data
+   */
+  prepareTimeSeriesData(data, dateColumn, valueColumn) {
+    const pairs = data
+      .map(row => ({
+        date: new Date(row[dateColumn]),
+        value: parseFloat(row[valueColumn])
+      }))
+      .filter(pair => !isNaN(pair.date) && !isNaN(pair.value))
+      .sort((a, b) => a.date - b.date);
+
+    return {
+      valid: pairs.length >= 3,
+      dates: pairs.map(p => p.date),
+      values: pairs.map(p => p.value)
+    };
   }
 
   /**
@@ -412,27 +420,6 @@ export class PatternDetector {
   }
 
   /**
-   * Calculate skewness
-   */
-  calculateSkewness(values, mean, stdDev) {
-    const n = values.length;
-    const cubed = values.reduce((sum, val) => 
-      sum + Math.pow((val - mean) / stdDev, 3), 0);
-    return (n / ((n - 1) * (n - 2))) * cubed;
-  }
-
-  /**
-   * Calculate kurtosis
-   */
-  calculateKurtosis(values, mean, stdDev) {
-    const n = values.length;
-    const fourth = values.reduce((sum, val) => 
-      sum + Math.pow((val - mean) / stdDev, 4), 0);
-    return ((n * (n + 1)) / ((n - 1) * (n - 2) * (n - 3))) * fourth - 
-           (3 * Math.pow(n - 1, 2)) / ((n - 2) * (n - 3));
-  }
-
-  /**
    * Determine distribution type
    */
   determineDistributionType(stats) {
@@ -449,7 +436,7 @@ export class PatternDetector {
   }
 
   /**
-   * Generate distribution insights
+   * Generate insights for distributions
    */
   generateDistributionInsights(stats, type) {
     const insights = [];
@@ -480,196 +467,267 @@ export class PatternDetector {
       const value = row[column];
       counts[value] = (counts[value] || 0) + 1;
     });
-// src/services/brain/analyzers/patternDetector.js - Continued
 
-return Object.entries(counts)
-.map(([category, count]) => ({
-  category,
-  count,
-  percentage: (count / data.length) * 100
-}))
-.sort((a, b) => b.count - a.count);
-}
+    return Object.entries(counts)
+      .map(([category, count]) => ({
+        category,
+        count,
+        percentage: (count / data.length) * 100
+      }))
+      .sort((a, b) => b.count - a.count);
+  }
 
-/**
-* Generate category insights
-*/
+  /**
+   * Generate category insights
+   */
+// Continuing the generateCategoryInsights method and adding remaining functionality...
+
 generateCategoryInsights(categories) {
-const insights = [];
-const totalCategories = categories.length;
-const dominantCategory = categories[0];
-const smallestCategory = categories[categories.length - 1];
+  const insights = [];
+  const totalCategories = categories.length;
+  const dominantCategory = categories[0];
+  const smallestCategory = categories[categories.length - 1];
 
-if (totalCategories > 0) {
-// Check for dominant category
-if (dominantCategory.percentage > 50) {
-  insights.push({
-    type: 'dominant',
-    description: `Dominant category "${dominantCategory.category}" represents ${dominantCategory.percentage.toFixed(1)}% of data`,
-    confidence: dominantCategory.percentage / 100
-  });
-}
-
-// Check for imbalanced distribution
-const ratio = dominantCategory.count / smallestCategory.count;
-if (ratio > 10) {
-  insights.push({
-    type: 'imbalance',
-    description: `Significant category imbalance detected (${ratio.toFixed(1)}:1 ratio)`,
-    confidence: Math.min(ratio / 20, 1)
-  });
-}
-
-// Check for rare categories
-const rareCategories = categories.filter(cat => cat.percentage < 5);
-if (rareCategories.length > 0) {
-  insights.push({
-    type: 'rare',
-    description: `Found ${rareCategories.length} rare categories (< 5% each)`,
-    confidence: 0.8,
-    details: {
-      categories: rareCategories.map(c => c.category),
-      totalPercentage: rareCategories.reduce((sum, cat) => sum + cat.percentage, 0)
+  if (totalCategories > 0) {
+    // Check for dominant category
+    if (dominantCategory.percentage > 50) {
+      insights.push({
+        type: 'dominant',
+        description: `Dominant category "${dominantCategory.category}" represents ${dominantCategory.percentage.toFixed(1)}% of data`,
+        confidence: dominantCategory.percentage / 100
+      });
     }
-  });
-}
-}
 
-return insights;
-}
-
-/**
-* Get aggregated insights across all patterns
-*/
-getAggregatedInsights() {
-const insights = [];
-
-// Add correlation insights
-this.patterns.correlations.forEach(correlation => {
-if (correlation.significance.significant) {
-  insights.push({
-    type: 'correlation',
-    importance: Math.abs(correlation.coefficient),
-    description: `${correlation.strength} correlation between ${correlation.columns.join(' and ')}`,
-    details: correlation
-  });
-}
-});
-
-// Add time series insights
-this.patterns.timeSeries.forEach(pattern => {
-pattern.insights.forEach(insight => {
-  insights.push({
-    type: 'timeSeries',
-    importance: pattern.confidence,
-    description: insight.description,
-    details: pattern
-  });
-});
-});
-
-// Add distribution insights
-this.patterns.distributions.forEach(distribution => {
-distribution.insights.forEach(insight => {
-  insights.push({
-    type: 'distribution',
-    importance: insight.confidence,
-    description: insight.description,
-    details: distribution
-  });
-});
-});
-
-// Add outlier insights
-this.patterns.outliers.forEach(outlierPattern => {
-if (outlierPattern.metadata.outlierCount > 0) {
-  insights.push({
-    type: 'outliers',
-    importance: Math.min(outlierPattern.metadata.outlierPercentage / 10, 1),
-    description: `Found ${outlierPattern.metadata.outlierCount} outliers in ${outlierPattern.column}`,
-    details: outlierPattern
-  });
-}
-});
-
-// Add category insights
-this.patterns.categories.forEach(categoryPattern => {
-categoryPattern.insights.forEach(insight => {
-  insights.push({
-    type: 'category',
-    importance: insight.confidence,
-    description: insight.description,
-    details: categoryPattern
-  });
-});
-});
-
-// Sort insights by importance
-return insights.sort((a, b) => b.importance - a.importance);
-}
-
-/**
-* Get visualization suggestions based on detected patterns
-*/
-getVisualizationSuggestions() {
-const suggestions = [];
-
-// Suggest visualizations for correlations
-this.patterns.correlations.forEach(correlation => {
-if (correlation.significance.significant) {
-  suggestions.push({
-    type: 'scatter',
-    columns: correlation.columns,
-    importance: Math.abs(correlation.coefficient),
-    description: `Scatter plot to visualize ${correlation.strength} correlation`,
-    config: {
-      showTrendline: true,
-      showConfidence: true
+    // Check for imbalanced distribution
+    const ratio = dominantCategory.count / smallestCategory.count;
+    if (ratio > 10) {
+      insights.push({
+        type: 'imbalance',
+        description: `Significant category imbalance detected (${ratio.toFixed(1)}:1 ratio)`,
+        confidence: Math.min(ratio / 20, 1),
+        ratio
+      });
     }
-  });
-}
-});
 
-// Suggest visualizations for time series
-this.patterns.timeSeries.forEach(pattern => {
-suggestions.push({
-  type: 'line',
-  columns: [pattern.dateColumn, pattern.valueColumn],
-  importance: pattern.confidence,
-  description: `Line chart to visualize time series pattern`,
-  config: {
-    showTrend: pattern.trend.strength > 0.5,
-    showSeasonality: pattern.seasonality?.strength > 0.5
+    // Check for rare categories
+    const rareCategories = categories.filter(cat => cat.percentage < 5);
+    if (rareCategories.length > 0) {
+      insights.push({
+        type: 'rare',
+        description: `Found ${rareCategories.length} rare categories (< 5% each)`,
+        confidence: 0.8,
+        details: {
+          categories: rareCategories.map(c => c.category),
+          totalPercentage: rareCategories.reduce((sum, cat) => sum + cat.percentage, 0)
+        }
+      });
+    }
+
+    // Check for uniform distribution
+    const expectedPercentage = 100 / totalCategories;
+    const deviations = categories.map(cat => 
+      Math.abs(cat.percentage - expectedPercentage)
+    );
+    const avgDeviation = deviations.reduce((a, b) => a + b, 0) / deviations.length;
+    
+    if (avgDeviation < 10) {
+      insights.push({
+        type: 'uniform',
+        description: 'Categories are relatively uniformly distributed',
+        confidence: 1 - (avgDeviation / 10)
+      });
+    }
   }
-});
-});
 
-// Suggest visualizations for distributions
-this.patterns.distributions.forEach(distribution => {
-suggestions.push({
-  type: 'histogram',
-  columns: [distribution.column],
-  importance: 0.7,
-  description: `Histogram to visualize ${distribution.type} distribution`,
-  config: {
-    showNormalCurve: distribution.type === 'normal',
-    showStats: true
-  }
-});
-});
-
-// Sort suggestions by importance
-return suggestions.sort((a, b) => b.importance - a.importance);
+  return insights;
 }
 
 /**
-* Update detector settings
-*/
-updateSettings(newSettings) {
-this.settings = {
-...this.settings,
-...newSettings
-};
+ * Additional statistical calculations
+ */
+calculateSkewness(values, mean, stdDev) {
+  const n = values.length;
+  if (n === 0 || stdDev === 0) return 0;
+  
+  const cube = values.reduce((sum, val) => 
+    sum + Math.pow((val - mean) / stdDev, 3)
+  , 0);
+  
+  return (n / ((n - 1) * (n - 2))) * cube;
+}
+
+calculateKurtosis(values, mean, stdDev) {
+  const n = values.length;
+  if (n === 0 || stdDev === 0) return 0;
+  
+  const fourth = values.reduce((sum, val) => 
+    sum + Math.pow((val - mean) / stdDev, 4)
+  , 0);
+  
+  return ((n * (n + 1)) / ((n - 1) * (n - 2) * (n - 3))) * fourth - 
+         (3 * Math.pow(n - 1, 2)) / ((n - 2) * (n - 3));
+}
+
+/**
+ * Advanced pattern detection methods
+ */
+async detectTrendPatterns(data, timeColumn, valueColumns) {
+  const trends = [];
+  
+  for (const valueCol of valueColumns) {
+    const values = data.map(row => row[valueCol]);
+    const times = data.map(row => new Date(row[timeColumn]).getTime());
+    
+    // Linear regression
+    const n = values.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    
+    for (let i = 0; i < n; i++) {
+      sumX += times[i];
+      sumY += values[i];
+      sumXY += times[i] * values[i];
+      sumX2 += times[i] * times[i];
+    }
+    
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    
+    // Calculate R-squared
+    const yMean = sumY / n;
+    let ssTot = 0, ssRes = 0;
+    
+    for (let i = 0; i < n; i++) {
+      const predicted = slope * times[i] + intercept;
+      ssTot += Math.pow(values[i] - yMean, 2);
+      ssRes += Math.pow(values[i] - predicted, 2);
+    }
+    
+    const rSquared = Math.max(0, Math.min(1, 1 - (ssRes / ssTot)));
+    
+    trends.push({
+      column: valueCol,
+      slope,
+      intercept,
+      rSquared,
+      type: slope > 0 ? 'increasing' : 'decreasing',
+      strength: Math.sqrt(rSquared),
+      metadata: {
+        timeRange: {
+          start: new Date(Math.min(...times)),
+          end: new Date(Math.max(...times))
+        }
+      }
+    });
+  }
+  
+  return trends;
+}
+
+async detectClusters(data, numericColumns, options = {}) {
+  const clusters = [];
+  const minPoints = options.minPoints || this.settings.clusterMinSize;
+  
+  // Simple clustering based on density
+  for (let i = 0; i < numericColumns.length; i++) {
+    for (let j = i + 1; j < numericColumns.length; j++) {
+      const col1 = numericColumns[i];
+      const col2 = numericColumns[j];
+      
+      const points = data.map(row => ({
+        x: row[col1],
+        y: row[col2]
+      })).filter(p => !isNaN(p.x) && !isNaN(p.y));
+      
+      // Find dense regions
+      const eps = options.eps || this.calculateOptimalEps(points);
+      const denseClusters = this.dbscan(points, eps, minPoints);
+      
+      if (denseClusters.length > 1) {
+        clusters.push({
+          columns: [col1, col2],
+          clusters: denseClusters,
+          confidence: this.calculateClusterConfidence(denseClusters, points.length),
+          metadata: {
+            totalPoints: points.length,
+            numClusters: denseClusters.length
+          }
+        });
+      }
+    }
+  }
+  
+  return clusters;
+}
+
+calculateOptimalEps(points) {
+  // Calculate average distance to k nearest neighbors
+  const k = Math.max(3, Math.floor(Math.sqrt(points.length) / 2));
+  const distances = [];
+  
+  for (const p1 of points) {
+    const pointDistances = points
+      .map(p2 => Math.sqrt(
+        Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2)
+      ))
+      .sort((a, b) => a - b)
+      .slice(1, k + 1);
+    
+    distances.push(pointDistances.reduce((a, b) => a + b, 0) / k);
+  }
+  
+  return distances.reduce((a, b) => a + b, 0) / distances.length;
+}
+
+dbscan(points, eps, minPts) {
+  const clusters = [];
+  const visited = new Set();
+  
+  for (const point of points) {
+    if (visited.has(point)) continue;
+    visited.add(point);
+    
+    const neighbors = this.getNeighbors(point, points, eps);
+    if (neighbors.length < minPts) continue;
+    
+    const cluster = [point];
+    clusters.push(cluster);
+    
+    let i = 0;
+    while (i < neighbors.length) {
+      const neighbor = neighbors[i];
+      
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        const newNeighbors = this.getNeighbors(neighbor, points, eps);
+        if (newNeighbors.length >= minPts) {
+          neighbors.push(...newNeighbors);
+        }
+      }
+      
+      if (!cluster.includes(neighbor)) {
+        cluster.push(neighbor);
+      }
+      
+      i++;
+    }
+  }
+  
+  return clusters;
+}
+
+getNeighbors(point, points, eps) {
+  return points.filter(p => 
+    p !== point && 
+    Math.sqrt(Math.pow(p.x - point.x, 2) + Math.pow(p.y - point.y, 2)) <= eps
+  );
+}
+
+calculateClusterConfidence(clusters, totalPoints) {
+  const clusterSizes = clusters.map(c => c.length);
+  const coverage = clusterSizes.reduce((a, b) => a + b, 0) / totalPoints;
+  const balance = 1 - (Math.max(...clusterSizes) - Math.min(...clusterSizes)) / totalPoints;
+  
+  return (coverage * 0.7 + balance * 0.3);
 }
 }
 

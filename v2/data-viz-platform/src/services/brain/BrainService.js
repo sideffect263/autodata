@@ -1,12 +1,15 @@
 // src/services/brain/BrainService.js
 import { EventEmitter } from 'events';
-import { VisualizationSuggester, visualizationSuggester } from './analyzers/visualizationSuggester';
-import { PatternDetector, patternDetector } from './analyzers/patternDetector';
+import { VisualizationSuggester } from './analyzers/visualizationSuggester';
+import { PatternDetector } from './analyzers/patternDetector';
 import { DataProcessor } from './processors/DataProcessor';
 import { MemoryManager } from './managers/MemoryManager';
+import { ColumnAnalyzer } from './analyzers/columnAnalyzer';
+import { insightGenerator } from './analyzers/insightGenerator';
 
 /**
- * Brain Service - Core AI system for the Data Visualization Platform
+ * Enhanced Brain Service for Data Visualization Platform
+ * Handles data analysis, pattern detection, and visualization suggestions
  */
 class BrainService extends EventEmitter {
   constructor() {
@@ -14,31 +17,53 @@ class BrainService extends EventEmitter {
     this.initialized = false;
     this.dataProcessor = new DataProcessor();
     this.memoryManager = new MemoryManager();
+    this.columnAnalyzer = new ColumnAnalyzer();
+    this.patternDetector = new PatternDetector();
+    this.visualizationSuggester = new VisualizationSuggester();
+    this.insightGenerator = insightGenerator; // Using the singleton instance
+    
+    // State management
     this.analysisCache = new Map();
+    this.suggestionHistory = new Map();
     this.userPreferences = new Map();
     this.currentAnalysis = null;
     this.processingQueue = [];
     
-    // Use singleton instances
-    this.visualizationSuggester = visualizationSuggester;
-    this.patternDetector = patternDetector;
+    // Analysis settings
+    this.settings = {
+      maxDataPoints: 100000,
+      minConfidenceScore: 0.6,
+      maxSuggestions: 10,
+      correlationThreshold: 0.5,
+      patternDetectionThreshold: 0.7,
+      maxInsightsPerType: 5,
+      maxTotalInsights: 20
+    };
   }
 
   /**
    * Initialize the brain system
    */
-  async initialize() {
-
+  async initialize(options = {}) {
     console.log('Brain initialization started');
     if (this.initialized) return;
 
     try {
+      // Load saved state and preferences
       await this.loadSavedState();
+      
+      // Initialize analyzers with options
+      await Promise.all([
+        this.patternDetector.initialize(options),
+        this.visualizationSuggester.initialize(options)
+      ]);
+
       this.initialized = true;
       this.emit('ready');
     } catch (error) {
       console.error('Brain initialization failed:', error);
       this.emit('error', error);
+      throw error;
     }
   }
 
@@ -50,16 +75,25 @@ class BrainService extends EventEmitter {
       await this.initialize();
     }
 
+    console.log('Processing data:', data?.length, 'rows');
+
     try {
+      // Validate input data
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error('Invalid data format: Must be non-empty array');
+      }
+
+      console.log('Data validation complete');
+
       // Check memory constraints
       const memoryStatus = this.memoryManager.checkMemoryStatus(data);
       if (!memoryStatus.sufficient) {
         return this.handleInsufficientMemory(data, memoryStatus);
       }
 
-      // Process data
+      // Clean and preprocess data
       const processedData = await this.dataProcessor.processData(data);
-      
+
       // Run analysis pipeline
       const analysisResult = await this.runAnalysisPipeline(processedData, options);
       this.currentAnalysis = analysisResult;
@@ -67,7 +101,9 @@ class BrainService extends EventEmitter {
       // Cache results
       this.cacheAnalysis(data, analysisResult);
 
+      console.log('Analysis complete:', analysisResult);
       return analysisResult;
+
     } catch (error) {
       console.error('Data processing failed:', error);
       this.emit('error', error);
@@ -78,67 +114,62 @@ class BrainService extends EventEmitter {
   /**
    * Run the complete analysis pipeline
    */
+  async runAnalysisPipeline(data, options) {
+    const startTime = Date.now();
 
-async runAnalysisPipeline(data, options) {
-  const analysis = {
-    timestamp: Date.now(),
-    metadata: {
-      rowCount: data.length,
-      approximateSize: this.memoryManager.approximateSize(data),
-      ...options
+    try {
+      // Initialize analysis object
+      const analysis = {
+        timestamp: startTime,
+        metadata: {
+          rowCount: data.length,
+          approximateSize: this.memoryManager.approximateSize(data),
+          ...options
+        }
+      };
+
+      // Analyze columns and data types
+      analysis.columns = await this.columnAnalyzer.analyzeColumns(data);
+
+      // Find numeric columns for analysis
+      const numericColumns = Object.entries(analysis.columns)
+        .filter(([_, info]) => info.type === 'numeric')
+        .map(([name]) => name);
+
+      // Update metadata
+      analysis.metadata.numericColumns = numericColumns;
+      analysis.metadata.primaryMetric = numericColumns[0] || null;
+
+      // Detect patterns
+      analysis.patterns = await this.patternDetector.analyzePatterns(data, analysis.columns);
+
+      // Generate insights using InsightGenerator
+      analysis.insights = await this.insightGenerator.generateInsights(
+        data, 
+        analysis.columns, 
+        analysis.patterns
+      );
+
+      // Generate visualization suggestions
+      analysis.suggestions = await this.generateScoredSuggestions(
+        data,
+        analysis.columns,
+        analysis.patterns,
+        this.userPreferences
+      );
+
+      // Add performance recommendations
+      analysis.performance = this.generatePerformanceRecommendations(data, analysis);
+
+      // Calculate analysis duration
+      analysis.metadata.analysisTime = Date.now() - startTime;
+
+      return analysis;
+
+    } catch (error) {
+      console.error('Analysis pipeline failed:', error);
+      throw error;
     }
-  };
-
-  // Analyze columns first
-  analysis.columns = this.analyzeColumns(data);
-
-  // Find numeric columns for suggestions
-  const numericColumns = Object.entries(analysis.columns)
-    .filter(([_, info]) => info.type === 'numeric')
-    .map(([name]) => name);
-
-  // Add suggested metrics to metadata
-  analysis.metadata.suggestedMetrics = numericColumns;
-  analysis.metadata.primaryMetric = numericColumns[0] || 'value';
-
-  // Continue with the rest of the pipeline
-  analysis.patterns = await this.patternDetector.analyzePatterns(data, analysis.columns);
-  analysis.insights = this.generateInsights(data, analysis.columns, analysis.patterns);
-  
-  // Pass both data and columns to suggestion generation
-  analysis.suggestions = await this.visualizationSuggester.generateSuggestions(
-    data,
-    analysis.columns,
-    analysis.patterns,
-    this.userPreferences
-  );
-
-  analysis.performance = this.generatePerformanceRecommendations(data, analysis);
-
-  return analysis;
-}
-
-  /**
-   * Generate insights from analysis
-   */
-  generateInsights(data, columns, patterns) {
-    const insights = [];
-
-    // Column-based insights
-    Object.entries(columns).forEach(([columnName, columnInfo]) => {
-      insights.push(...this.generateColumnInsights(columnName, columnInfo));
-    });
-
-    // Pattern-based insights
-    if (patterns.correlations?.length) {
-      insights.push(...this.generateCorrelationInsights(patterns.correlations));
-    }
-
-    if (patterns.timeSeries?.length) {
-      insights.push(...this.generateTimeSeriesInsights(patterns.timeSeries));
-    }
-
-    return insights.sort((a, b) => b.importance - a.importance);
   }
 
   /**
@@ -151,7 +182,7 @@ async runAnalysisPipeline(data, options) {
       memory: []
     };
 
-    // Add data size recommendations
+    // Data size recommendations
     if (data.length > 10000) {
       recommendations.dataProcessing.push({
         type: 'sampling',
@@ -160,7 +191,7 @@ async runAnalysisPipeline(data, options) {
       });
     }
 
-    // Add column-specific recommendations
+    // Column-specific recommendations
     Object.entries(analysis.columns).forEach(([columnName, columnInfo]) => {
       if (columnInfo.type === 'numeric' && columnInfo.stats.distinct > 1000) {
         recommendations.visualization.push({
@@ -172,81 +203,44 @@ async runAnalysisPipeline(data, options) {
       }
     });
 
+    // Memory recommendations
+    const memoryStatus = this.memoryManager.checkMemoryStatus(data);
+    if (!memoryStatus.sufficient) {
+      recommendations.memory.push({
+        type: 'optimization',
+        description: 'Dataset size exceeds memory limits. Consider data sampling or chunking.',
+        importance: 0.9
+      });
+    }
+
     return recommendations;
   }
 
-  /**
-   * Generate column insights
-   */
-  generateColumnInsights(columnName, columnInfo) {
-    const insights = [];
 
-    switch (columnInfo.type) {
-      case 'numeric':
-        insights.push({
-          type: 'distribution',
-          columns: [columnName],
-          description: `Distribution analysis of ${columnName}`,
-          importance: 0.7,
-          stats: columnInfo.stats
-        });
-        break;
-
-      case 'categorical':
-        insights.push({
-          type: 'category',
-          columns: [columnName],
-          description: `Category distribution in ${columnName}`,
-          importance: 0.6,
-          uniqueValues: columnInfo.stats.distinct
-        });
-        break;
-
-      case 'date':
-        insights.push({
-          type: 'temporal',
-          columns: [columnName],
-          description: `Temporal analysis of ${columnName}`,
-          importance: 0.8
-        });
-        break;
-    }
-
-    return insights;
+  getInsightsForColumn(columnName) {
+    if (!this.currentAnalysis?.insights) return [];
+    
+    return this.currentAnalysis.insights.filter(insight => 
+      insight.columns?.includes(columnName) || 
+      insight.column === columnName
+    );
   }
 
   /**
-   * Generate correlation insights
+   * Generate scored visualization suggestions
    */
-  generateCorrelationInsights(correlations) {
-    return correlations.map(correlation => ({
-      type: 'correlation',
-      columns: correlation.columns,
-      description: `${correlation.strength} correlation between ${correlation.columns.join(' and ')}`,
-      importance: Math.abs(correlation.coefficient),
-      correlation: correlation
-    }));
-  }
+  async generateScoredSuggestions(data, columns, patterns, preferences) {
+    const suggestions = await this.visualizationSuggester.generateSuggestions(
+      data,
+      columns,
+      patterns,
+      preferences
+    );
 
-  /**
-   * Generate time series insights
-   */
-  generateTimeSeriesInsights(patterns) {
-    return patterns.map(pattern => ({
-      type: 'timeSeries',
-      columns: [pattern.dateColumn, pattern.valueColumn],
-      description: `Time series pattern in ${pattern.valueColumn}`,
-      importance: pattern.confidence,
-      pattern: pattern
-    }));
-  }
-
-  /**
-   * Handle insufficient memory scenarios
-   */
-  async handleInsufficientMemory(data, memoryStatus) {
-    const sampledData = await this.dataProcessor.sampleData(data, memoryStatus.recommendedSize);
-    return this.processData(sampledData, { sampled: true, originalSize: data.length });
+    return suggestions
+      .filter(suggestion => suggestion.score >= this.settings.minConfidenceScore)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, this.settings.maxSuggestions);
   }
 
   /**
@@ -256,47 +250,47 @@ async runAnalysisPipeline(data, options) {
     this.userPreferences = new Map([...this.userPreferences, ...preferences]);
     
     if (this.currentAnalysis) {
-      this.currentAnalysis.suggestions = await this.visualizationSuggester.generateSuggestions(
+      // Regenerate suggestions with updated preferences
+      const newSuggestions = await this.generateScoredSuggestions(
         this.currentAnalysis.data,
         this.currentAnalysis.columns,
         this.currentAnalysis.patterns,
         this.userPreferences
       );
       
-      this.emit('suggestionsUpdated', this.currentAnalysis.suggestions);
+      this.currentAnalysis.suggestions = newSuggestions;
+      this.emit('suggestionsUpdated', newSuggestions);
     }
 
     await this.saveState();
   }
 
   /**
-   * Cache analysis results
+   * State management
    */
-  cacheAnalysis(data, analysis) {
-    const cacheKey = this.generateCacheKey(data);
-    this.analysisCache.set(cacheKey, {
-      analysis,
-      timestamp: Date.now()
-    });
-
-    this.memoryManager.cleanupCache(this.analysisCache);
+  async saveState() {
+    try {
+      localStorage.setItem('brainPreferences', 
+        JSON.stringify(Array.from(this.userPreferences.entries()))
+      );
+      localStorage.setItem('brainSettings',
+        JSON.stringify(this.settings)
+      );
+    } catch (error) {
+      console.warn('Failed to save brain state:', error);
+    }
   }
 
-  /**
-   * Generate cache key for dataset
-   */
-  generateCacheKey(data) {
-    return `${data.length}-${Object.keys(data[0]).join('-')}`;
-  }
-
-  /**
-   * Load saved state
-   */
   async loadSavedState() {
     try {
       const savedPreferences = localStorage.getItem('brainPreferences');
       if (savedPreferences) {
         this.userPreferences = new Map(JSON.parse(savedPreferences));
+      }
+
+      const savedSettings = localStorage.getItem('brainSettings');
+      if (savedSettings) {
+        this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
       }
     } catch (error) {
       console.warn('Failed to load saved state:', error);
@@ -304,85 +298,41 @@ async runAnalysisPipeline(data, options) {
   }
 
   /**
-   * Save current state
+   * Memory management
    */
-  async saveState() {
-    try {
-      localStorage.setItem('brainPreferences', 
-        JSON.stringify(Array.from(this.userPreferences.entries()))
-      );
-    } catch (error) {
-      console.warn('Failed to save state:', error);
-    }
+  async handleInsufficientMemory(data, memoryStatus) {
+    const sampledData = await this.dataProcessor.sampleData(data, memoryStatus.recommendedSize);
+    return this.processData(sampledData, { sampled: true, originalSize: data.length });
   }
 
   /**
-   * Clean up resources
+   * Cache management
    */
-  destroy() {
+  cacheAnalysis(data, analysis) {
+    const cacheKey = this.generateCacheKey(data);
+    this.analysisCache.set(cacheKey, {
+      analysis,
+      timestamp: Date.now()
+    });
+    this.memoryManager.cleanupCache(this.analysisCache);
+  }
+
+  generateCacheKey(data) {
+    const sampleSize = Math.min(100, data.length);
+    const sample = data.slice(0, sampleSize);
+    return `${data.length}-${Object.keys(data[0]).join('-')}-${JSON.stringify(sample)}`;
+  }
+
+  /**
+   * Cleanup and disposal
+   */
+  dispose() {
     this.saveState();
     this.removeAllListeners();
     this.analysisCache.clear();
+    this.suggestionHistory.clear();
     this.userPreferences.clear();
     this.initialized = false;
-  }
-
-  /**
-   * Analyze column types and statistics
-   */
-  analyzeColumns(data) {
-    const columns = {};
-    const sample = data[0];
-
-    for (const [key, value] of Object.entries(sample)) {
-      const values = data.map(row => row[key]);
-      
-      columns[key] = {
-        name: key,
-        type: this.detectColumnType(values),
-        unique: new Set(values).size,
-        nullCount: values.filter(v => v === null || v === undefined || v === '').length,
-        stats: this.calculateColumnStats(values)
-      };
-    }
-
-    return columns;
-  }
-
-  /**
-   * Detect column type
-   */
-  detectColumnType(values) {
-    const nonNullValue = values.find(v => v !== null && v !== undefined && v !== '');
-    
-    if (typeof nonNullValue === 'number') return 'numeric';
-    if (!isNaN(Date.parse(nonNullValue))) return 'date';
-    
-    const uniqueCount = new Set(values).size;
-    if (uniqueCount <= Math.min(10, values.length * 0.1)) return 'categorical';
-    
-    return 'text';
-  }
-
-  /**
-   * Calculate column statistics
-   */
-  calculateColumnStats(values) {
-    const stats = {
-      min: null,
-      max: null,
-      mean: null,
-      distinct: new Set(values).size
-    };
-
-    if (typeof values[0] === 'number') {
-      const numericValues = values.filter(v => typeof v === 'number');
-      stats.min = Math.min(...numericValues);
-      stats.max = Math.max(...numericValues);
-      stats.mean = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
-    }
-
-    return stats;
   }
 }
 

@@ -1,14 +1,12 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Box,
   Paper,
   Typography,
   Alert,
   AlertTitle,
-  CircularProgress,
-  Divider,
-  Grid,
   LinearProgress,
+  Grid,
   Card,
   CardContent,
   Button
@@ -17,8 +15,6 @@ import { useData } from '../../contexts/DataContext';
 import DataSourceSelector from './DataSourceSelector';
 import { processFile } from '../../utils/fileHandlers';
 import Papa from 'papaparse';
-
-
 
 const PRELOADED_DATASETS = [
   {
@@ -47,92 +43,74 @@ const PRELOADED_DATASETS = [
   },
 ];
 
+const API_SOURCES = [
+  {
+    id: 'data_usa',
+    title: 'Data USA API',
+    description: 'Comprehensive data on U.S. demographics, economy, education, and health.',
+    endpoint: 'https://datausa.io/api/data?drilldowns=Nation&measures=Population',
+  },
+  {
+    id: 'open_food_facts',
+    title: 'Open Food Facts API',
+    description: 'Global database of food products, including ingredients and nutrition.',
+    endpoint: 'https://world.openfoodfacts.org/category/cheeses.json',
+  },
+  {
+    id: 'coingecko',
+    title: 'CoinGecko API',
+    description: 'Cryptocurrency market data, including prices and historical trends.',
+    endpoint: 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd',
+  },
+];
+
 const DataUpload = ({ onDataProcessed }) => {
+
+  console.log('DataUpload render');
   const { processData, isLoading, error, processingStatus } = useData();
   const [activeSource, setActiveSource] = useState(null);
 
   const handlePreloadedDatasetSelect = async (dataset) => {
     try {
-      // Fetch the dataset file (mocked here for simplicity)
       const response = await fetch(dataset.file);
-
-      console.log('Preloaded dataset fetched:', response);
-      
       const fileContent = await response.text();
 
-      console.log('Preloaded dataset content:', fileContent);
+      const parsedData = Papa.parse(fileContent, {
+        header: true,
+        skipEmptyLines: true
+      });
 
-      
-    // Parse the CSV data
-    const parsedData = Papa.parse(fileContent, {
-      header: true,
-      skipEmptyLines: true
-    });
-
-    if (parsedData.errors.length > 0) {
-      throw new Error('Error parsing CSV data');
-    }
-
-
-    console.log('Parsed dataset:', parsedData.data);
+      if (parsedData.errors.length > 0) {
+        throw new Error('Error parsing CSV data');
+      }
 
       const result = await processData(parsedData.data);
-
-      console.log('Preloaded dataset processed:', result);
-
       if (!result.success) {
         throw new Error(result.error);
       }
-
-      onDataProcessed(result.data);
     } catch (err) {
       console.error('Failed to load preloaded dataset:', err);
     }
   };
 
-  const handleDataSourceSelect = async (source) => {
-    setActiveSource(source);
-
+  const handleApiSelect = async (api) => {
     try {
-      let result;
+      const response = await fetch(api.endpoint);
 
-      switch (source.type) {
-        case 'local':
-          // Process local file upload
-          result = await processFile(source.file);
-          break;
-
-        case 'api':
-          result = {
-            data: source.data,
-            metadata: {
-              source: 'api',
-              config: source.config,
-            },
-          };
-          break;
-
-        case 'cloud':
-          throw new Error('Cloud service integration coming soon');
-
-        default:
-          throw new Error('Unsupported data source type');
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.statusText}`);
       }
 
-      const processResult = await processData(result.data);
+      const apiData = await response.json();
+      const result = await processData(apiData);
 
-      if (!processResult.success) {
-        throw new Error(processResult.error);
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
-      if (source.type === 'api' && source.config?.autoRefresh) {
-        const intervalId = setInterval(() => {
-          handleDataSourceSelect(source);
-        }, source.config.refreshInterval * 1000);
-        setActiveSource((prev) => ({ ...prev, intervalId }));
-      }
+      console.log('API data processed successfully:', result);
     } catch (err) {
-      console.error('Data processing failed:', err);
+      console.error(`Failed to fetch data from ${api.title}:`, err);
     }
   };
 
@@ -164,10 +142,7 @@ const DataUpload = ({ onDataProcessed }) => {
           </Box>
         )}
 
-        {!isLoading && (
-          <DataSourceSelector onDataSourceSelect={handleDataSourceSelect} disabled={isLoading} />
-        )}
-
+        <DataSourceSelector onDataSourceSelect={setActiveSource} disabled={isLoading} />
         {error && (
           <Alert severity="error" sx={{ mt: 2 }}>
             <AlertTitle>Upload Failed</AlertTitle>
@@ -176,32 +151,47 @@ const DataUpload = ({ onDataProcessed }) => {
         )}
       </Paper>
 
-      {/* Preloaded Datasets Section */}
-      <Paper sx={{ p: 3 }}>
+      <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
           Preloaded Datasets
         </Typography>
-        <Typography variant="body2" color="text.secondary" paragraph>
-          Choose from one of our preloaded datasets to test the platform's features.
-        </Typography>
-
-        <Grid container spacing={2}>
+        <Grid className='PreloadedDatasets' container spacing={2}>
           {PRELOADED_DATASETS.map((dataset) => (
             <Grid item xs={12} sm={6} key={dataset.id}>
               <Card variant="outlined" sx={{ p: 2, '&:hover': { boxShadow: 4 } }}>
                 <CardContent>
-                  <Typography variant="subtitle1" gutterBottom>
-                    {dataset.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" paragraph>
-                    {dataset.description}
+                  <Typography variant="subtitle1">{dataset.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">{dataset.description}</Typography>
+                  <Button variant="contained" size="small" onClick={() => handlePreloadedDatasetSelect(dataset)}>
+                    Load Dataset
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Paper>
+
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          API Sources
+        </Typography>
+        <Grid container spacing={2}>
+          {API_SOURCES.map((api) => (
+            <Grid item xs={12} sm={6} key={api.id}>
+              <Card variant="outlined" sx={{ p: 2, '&:hover': { boxShadow: 4 } }}>
+                <CardContent>
+                  <Typography variant="subtitle1">{api.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">{api.description}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 2 }}>
+                    Endpoint: {api.endpoint}
                   </Typography>
                   <Button
                     variant="contained"
                     size="small"
-                    onClick={() => handlePreloadedDatasetSelect(dataset)}
+                    onClick={() => handleApiSelect(api)}
                   >
-                    Load Dataset
+                    Fetch Data
                   </Button>
                 </CardContent>
               </Card>

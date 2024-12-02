@@ -36,10 +36,10 @@ const ChartsView = () => {
 
   return (
     <ChartProvider>
-      <Box sx={{ height: '100%', p: 2 }}>
-        <Grid container spacing={3}>
+      <Box  sx={{ height: '100%', p: 2 }}>
+        <Grid   container spacing={3}>
           <Grid item xs={12} md={3}>
-            <ChartTypeSidebar />
+            <ChartTypeSidebar  />
           </Grid>
           <Grid item xs={12} md={9}>
             <ChartVisualization />

@@ -5,29 +5,14 @@ import {
   Typography,
   IconButton,
   Box,
-  Menu,
-  MenuItem,
   useMediaQuery,
-  useTheme
+  useTheme,
 } from '@mui/material';
-import {
-  GitHub as GitHubIcon,
-  HelpOutline as HelpIcon,
-  Menu as MenuIcon
-} from '@mui/icons-material';
+import { GitHub as GitHubIcon, HelpOutline as HelpIcon } from '@mui/icons-material';
 
-const AppHeader = ({ onMenuClick }) => {
+const AppHeader = ({ onHelpClick }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [anchorEl, setAnchorEl] = React.useState(null);
-
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
 
   return (
     <AppBar
@@ -35,16 +20,16 @@ const AppHeader = ({ onMenuClick }) => {
       sx={{
         zIndex: (theme) => theme.zIndex.drawer + 1,
         background: 'linear-gradient(to right, #3f51b5, #2196f3)',
-        py: isMobile ? 0.5 : 1, // Adjust padding for mobile
+        py: isMobile ? 0.5 : 1,
       }}
     >
       <Toolbar sx={{ justifyContent: isMobile ? 'space-between' : 'flex-start' }}>
-      <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Data Visualization Platform
-          </Typography>
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          Data Visualization Platform
+        </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <IconButton color="inherit" size="large">
+          <IconButton color="inherit" size="large" onClick={onHelpClick}>
             <HelpIcon />
           </IconButton>
           <IconButton
