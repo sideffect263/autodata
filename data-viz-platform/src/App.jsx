@@ -62,6 +62,7 @@ const App = () => {
               backgroundColor: 'background.default'
             }}
           >
+            {renderContent()}
           </Box>
         </Box>
       </Box>
