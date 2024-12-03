@@ -71,9 +71,10 @@ export const useThreeD = () => {
 };
 
 export const ThreeDProvider = ({ children }) => {
-  console.log('ThreeDProvider');
   const { data, analysis } = useData();
   const brain = useBrain(data, { dimensionality: '3d' });
+
+
 
   // Core state with initial values
   const [state, setState] = useState({
@@ -88,6 +89,7 @@ export const ThreeDProvider = ({ children }) => {
   // Memoized suggestions
   const suggestions = useMemo(() => {
     if (!brain.suggestions) return [];
+
     
     return brain.suggestions.filter(suggestion => 
       suggestion.visualization?.dimensions === 3 &&
@@ -119,6 +121,7 @@ export const ThreeDProvider = ({ children }) => {
       );
 
       if (brain.updatePreferences) {
+        
         await brain.updatePreferences(new Map([
           ['3dSuggestions', vis3dSuggestions]
         ]));
@@ -135,18 +138,19 @@ export const ThreeDProvider = ({ children }) => {
 
   // Initialize with best suggestion
   useEffect(() => {
-    if (suggestions.length > 0 && !state.activeSuggestion && data) {
+    if (suggestions.length > 0 && !state.activeSuggestion && data && !state.columns.x) {
       const bestSuggestion = suggestions[0];
-      updateState({
+      setState(prevState => ({
+        ...prevState,
         activeSuggestion: bestSuggestion,
         visualizationType: bestSuggestion.visualization.type,
         columns: {
-          ...state.columns,
+          ...prevState.columns,
           ...bestSuggestion.visualization.config
         }
-      });
+      }));
     }
-  }, [suggestions, state.activeSuggestion, data, updateState]);
+  }, [suggestions, data]); // Only depend on suggestions and data
 
   // Validate columns
   const validateColumns = useCallback((cols) => {
@@ -160,27 +164,70 @@ export const ThreeDProvider = ({ children }) => {
     );
   }, [data]);
 
-  // Event handlers
-  const handleVisualizationChange = useCallback((type) => {
-    if (!type || type === state.visualizationType) return;
+  // Handle visualization type change
+ 
+  const setVisualizationType = useCallback((type) => {
+    setState(prevState => {
+      if (!type || type === prevState.visualizationType) return prevState;
+      return {
+        ...prevState,
+        visualizationType: type,
+        activeSuggestion: null
+      };
+    });
+  
+    if (brain.updatePreferences) {
+      brain.updatePreferences(new Map([
+        ['preferred3DType', type],
+        ['lastVisualizationType', type]
+      ]));
+    }
+  }, [brain]);
+
+
+  // Handle column change
+  const handleColumnChange = useCallback((axis, value) => {
+    if (!axis || !data) return;
 
     try {
+      const newColumns = {
+        ...state.columns,
+        [axis]: value
+      };
+
       updateState({
-        visualizationType: type,
+        columns: newColumns,
         activeSuggestion: null
       });
 
-      if (brain.updatePreferences) {
+      if (brain.updatePreferences && brain.getInsightsForColumn) {
+        const columnInsights = brain.getInsightsForColumn(value);
         brain.updatePreferences(new Map([
-          ['preferred3DType', type],
-          ['lastVisualizationType', type]
+          ['selected3DColumns', newColumns],
+          ['column3DInsights', columnInsights]
         ]));
       }
     } catch (err) {
-      updateState({ error: 'Failed to change visualization: ' + err.message });
+      updateState({ error: 'Failed to update column: ' + err.message });
     }
-  }, [state.visualizationType, brain, updateState]);
+  }, [state.columns, data, brain, updateState]);
 
+  // Handle settings change
+  const handleSettingChange = useCallback((category, setting, value) => {
+    setState(prevState => ({
+      ...prevState,
+      settings: {
+        ...prevState.settings,
+        [category]: {
+          ...prevState.settings[category],
+          [setting]: value
+        }
+      }
+    }));
+  }, []); // Remove dependencies as we're using functional update
+
+
+  // Handle suggestion click
   const handleSuggestionClick = useCallback((suggestion) => {
     if (!suggestion?.visualization) return;
 
@@ -208,44 +255,6 @@ export const ThreeDProvider = ({ children }) => {
     }
   }, [state.columns, brain, updateState]);
 
-  const handleColumnChange = useCallback((axis, value) => {
-    if (!axis || !data) return;
-
-    try {
-      const newColumns = {
-        ...state.columns,
-        [axis]: value
-      };
-
-      updateState({
-        columns: newColumns,
-        activeSuggestion: null
-      });
-
-      if (brain.updatePreferences && brain.getInsightsForColumn) {
-        const columnInsights = brain.getInsightsForColumn(value);
-        brain.updatePreferences(new Map([
-          ['selected3DColumns', newColumns],
-          ['column3DInsights', columnInsights]
-        ]));
-      }
-    } catch (err) {
-      updateState({ error: 'Failed to update column: ' + err.message });
-    }
-  }, [state.columns, data, brain, updateState]);
-
-  const handleSettingChange = useCallback((category, setting, value) => {
-    updateState({
-      settings: {
-        ...state.settings,
-        [category]: {
-          ...state.settings[category],
-          [setting]: value
-        }
-      }
-    });
-  }, [state.settings, updateState]);
-
   // Context value
   const value = useMemo(() => ({
     // State
@@ -262,7 +271,7 @@ export const ThreeDProvider = ({ children }) => {
     },
 
     // Actions
-    setVisualizationType: handleVisualizationChange,
+    setVisualizationType,
     handleSuggestionClick,
     handleColumnChange,
     handleSettingChange,
@@ -278,7 +287,7 @@ export const ThreeDProvider = ({ children }) => {
     validateColumns,
     data,
     analysis,
-    handleVisualizationChange,
+    setVisualizationType,
     handleSuggestionClick,
     handleColumnChange,
     handleSettingChange,

@@ -77,7 +77,6 @@ export const useBrain = (data, options = {}) => {
       return;
     }
 
-    console.log('Data changed:', data);
     dataRef.current = data;
     analyzeData();
   }, [data, validateData]);

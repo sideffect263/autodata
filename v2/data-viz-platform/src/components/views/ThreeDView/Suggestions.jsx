@@ -32,8 +32,6 @@ const SuggestionCard = ({ suggestion, isActive, onClick }) => {
     setExpanded(!expanded);
   };
 
-  console.log(suggestion);
-
   return (
     <Card
       elevation={isActive ? 3 : 1}
@@ -121,6 +119,12 @@ const Suggestions = () => {
     error
   } = useThreeD();
 
+
+  const threeDSuggestions = suggestions.filter(suggestion => 
+    suggestion.visualization?.dimensions === 3
+  );
+
+
   if (isLoading) {
     return (
       <Paper sx={{ p: 2, mb: 2 }}>
@@ -148,7 +152,7 @@ const Suggestions = () => {
     );
   }
 
-  if (!suggestions?.length) {
+  if (!threeDSuggestions?.length) {
     return null;
   }
 
@@ -165,7 +169,7 @@ const Suggestions = () => {
       </Box>
 
       <Grid container spacing={2}>
-        {suggestions.map((suggestion, index) => (
+        {threeDSuggestions.map((suggestion, index) => (
           <Grid item xs={12} md={4} key={index}>
             <SuggestionCard
               suggestion={suggestion}

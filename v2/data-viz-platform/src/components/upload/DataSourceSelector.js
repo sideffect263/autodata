@@ -47,7 +47,7 @@ const DataSourceSelector = () => {
         value={sourceType}
         onChange={handleSourceTypeChange}
         variant={isMobile ? 'scrollable' : 'fullWidth'}
-        scrollButtons={isMobile ? 'auto' : 'off'}
+        scrollButtons={isMobile ? 'auto' : false}
         sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
       >
         <Tab 

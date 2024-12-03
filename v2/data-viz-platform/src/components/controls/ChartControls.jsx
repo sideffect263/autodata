@@ -25,7 +25,6 @@ const ChartControls = ({
 
   if (!columns || columns.length === 0) return null;
 
-  console.log('selected', selected);
 
   const handleChange = (field) => (event) => {
     const newValue = event.target.value;

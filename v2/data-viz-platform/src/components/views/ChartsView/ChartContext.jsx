@@ -45,8 +45,6 @@ export const ChartProvider = ({ children }) => {
 
   // Reset selected columns when data changes
   useEffect(() => {
-    console.log('Data changed:', data);
-    console.log('Selected columns:', Object.keys(data[0]));
     if (data && data.length > 0) {
       const columns = Object.keys(data[0]);
       setSelectedColumns(prev => ({
@@ -76,7 +74,6 @@ export const ChartProvider = ({ children }) => {
   }, [updatePreferences]);
   const handleSuggestionClick = useCallback((suggestion) => {
 
-    console.log('Suggestion clicked:', suggestion);
     if (!suggestion || !suggestion.visualization) return;
   
     const { type, config } = suggestion.visualization;

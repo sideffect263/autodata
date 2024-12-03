@@ -20,7 +20,7 @@ export class VisualizationSuggester {
         scatter: ['numeric', 'numeric'],
         pie: ['categorical'],
         scatter3d: ['numeric', 'numeric', 'numeric'],
-        surface: ['numeric', 'numeric', 'numeric'],
+        surface3d: ['numeric', 'numeric', 'numeric'],
         bar3d: ['numeric', 'numeric', 'numeric']
       }
     };
@@ -256,6 +256,8 @@ export class VisualizationSuggester {
 
     if (numericColumns.length < 2) return suggestions;
 
+    
+
     // Generate scatter plots
     for (let i = 0; i < numericColumns.length - 1; i++) {
       for (let j = i + 1; j < numericColumns.length; j++) {
@@ -323,8 +325,8 @@ export class VisualizationSuggester {
 
           // 3D Scatter Plot
           suggestions.push({
-            id: `scatter3d-${columnSet.join('-')}`,
-            type: 'scatter3d',
+            id: `scatter-${columnSet.join('-')}`,
+            type: 'scatter',
             title: '3D Relationship Analysis',
             description: `Explore relationships between ${columnSet.join(', ')}`,
             columns: {
@@ -333,7 +335,7 @@ export class VisualizationSuggester {
               z: columnSet[2]
             },
             visualization: {
-              type: 'scatter3d',
+              type: 'scatter',
               dimensions: 3,
               config: {
                 x: columnSet[0],
@@ -456,12 +458,24 @@ export class VisualizationSuggester {
     if (!patterns) return 0;
 
     try {
-      // Check for column-specific patterns
-      const columns = Object.values(suggestion.columns);
-      const relevantPatterns = patterns.filter(pattern => 
-        columns.includes(pattern.column) || 
-        pattern.columns?.some(col => columns.includes(col))
-      );
+     // Extract all pattern arrays from the patterns object
+     const allPatterns = [
+      ...patterns.correlations,
+      ...patterns.timeSeries,
+      ...patterns.distributions,
+      ...patterns.outliers,
+      ...patterns.categories
+    ];
+
+
+    // Check for column-specific patterns
+    const columns = Object.values(suggestion.columns);
+    const relevantPatterns = allPatterns.filter(pattern => 
+      columns.includes(pattern.column) || 
+      pattern.columns?.some(col => columns.includes(col))
+    );
+
+
 
       if (relevantPatterns.length === 0) return 0;
 

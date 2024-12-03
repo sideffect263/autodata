@@ -66,7 +66,6 @@ const API_SOURCES = [
 
 const DataUpload = ({ onDataProcessed }) => {
 
-  console.log('DataUpload render');
   const { processData, isLoading, error, processingStatus } = useData();
   const [activeSource, setActiveSource] = useState(null);
 
@@ -108,7 +107,6 @@ const DataUpload = ({ onDataProcessed }) => {
         throw new Error(result.error);
       }
 
-      console.log('API data processed successfully:', result);
     } catch (err) {
       console.error(`Failed to fetch data from ${api.title}:`, err);
     }

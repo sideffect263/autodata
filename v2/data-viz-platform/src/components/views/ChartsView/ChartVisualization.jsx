@@ -70,7 +70,6 @@ const ChartVisualization = () => {
       if (!chartContainer) return;
 
       // Implementation will depend on your export requirements
-      console.log('Exporting chart...');
     } catch (err) {
       console.error('Export failed:', err);
     }
@@ -85,7 +84,6 @@ const ChartVisualization = () => {
         timestamp: new Date().toISOString()
       };
       // Implementation will depend on your save requirements
-      console.log('Saving view config:', viewConfig);
     } catch (err) {
       console.error('Save failed:', err);
     }

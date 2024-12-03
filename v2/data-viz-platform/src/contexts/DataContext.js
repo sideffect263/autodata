@@ -67,7 +67,6 @@ const processData = useCallback(async (rawData) => {
         progress: 100,
         stage: 'completed'
       }),
-      console.log('Set current view to 2D'),
       setCurrentView('d2') // Force navigation to 2D view
     ]);
 
