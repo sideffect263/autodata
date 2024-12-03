@@ -111,17 +111,13 @@ export const ChartProvider = ({ children }) => {
 
     // Only update preferences if we have valid columns
     if (newColumns.x && newColumns.y) {
-      const columnInsights = getInsightsForColumn(newColumns.x)
-        .concat(getInsightsForColumn(newColumns.y));
 
-      if (columnInsights.length > 0) {
         updatePreferences(new Map([
           ['selectedColumns', [newColumns.x, newColumns.y]],
-          ['columnInsights', columnInsights]
         ]));
-      }
+      
     }
-  }, [getInsightsForColumn, updatePreferences]);
+  }, [ updatePreferences]);
 
   const value = {
     // State
