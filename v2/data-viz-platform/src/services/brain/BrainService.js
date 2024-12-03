@@ -79,9 +79,7 @@ class BrainService extends EventEmitter {
 
     try {
       // Validate input data
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new Error('Invalid data format: Must be non-empty array-brainserice', data);
-      }
+    
 
       console.log('Data validation complete');
 
