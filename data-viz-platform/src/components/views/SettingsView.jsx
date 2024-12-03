@@ -17,6 +17,7 @@ import {
   Alert,
   Snackbar
 } from '@mui/material';
+import { SketchPicker } from 'react-color';
 
 const SettingsView = () => {
   const [settings, setSettings] = useState({
@@ -46,6 +47,16 @@ const SettingsView = () => {
       [section]: {
         ...prev[section],
         [field]: event.target.value || event.target.checked
+      }
+    }));
+  };
+
+  const handleColorChange = (color) => {
+    setSettings(prev => ({
+      ...prev,
+      theme: {
+        ...prev.theme,
+        primaryColor: color.hex
       }
     }));
   };
@@ -105,12 +116,9 @@ const SettingsView = () => {
               </Select>
             </FormControl>
 
-            <TextField
-              fullWidth
-              label="Primary Color"
-              type="color"
-              value={settings.theme.primaryColor}
-              onChange={handleChange('theme', 'primaryColor')}
+            <SketchPicker
+              color={settings.theme.primaryColor}
+              onChangeComplete={handleColorChange}
               sx={{ mb: 2 }}
             />
           </Grid>
