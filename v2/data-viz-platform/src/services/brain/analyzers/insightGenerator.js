@@ -3,7 +3,7 @@
 export class InsightGenerator {
   constructor() {
     this.settings = {
-      minConfidenceThreshold: 0.6,
+      minConfidenceThreshold: 0.2,
       maxInsightsPerType: 5,
       maxTotalInsights: 20,
       importanceWeights: {
@@ -30,12 +30,17 @@ export class InsightGenerator {
     try {
       const insights = [];
 
+      console.log('Generating insights...');
+
       // Generate all types of insights
       const columnInsights = await this.generateColumnInsights(columns);
       const correlationInsights = await this.generateCorrelationInsights(patterns?.correlations || []);
       const distributionInsights = await this.generateDistributionInsights(patterns?.distributions || []);
       const timeSeriesInsights = await this.generateTimeSeriesInsights(patterns?.timeSeries || []);
       const outlierInsights = await this.generateOutlierInsights(patterns?.outliers || []);
+
+      console.log('Generated insights:', columnInsights, correlationInsights, distributionInsights, timeSeriesInsights, outlierInsights);
+      
 
       insights.push(
         ...columnInsights,
@@ -47,7 +52,12 @@ export class InsightGenerator {
 
       // Score and filter insights
       const scoredInsights = this.scoreInsights(insights);
+
+      console.log('Scored insights:', scoredInsights);
+
       const filteredInsights = this.filterInsights(scoredInsights);
+
+      console.log('Scored and filtered insights:', filteredInsights);
 
       // Group and sort insights
       return this.groupAndSortInsights(filteredInsights);
@@ -62,7 +72,11 @@ export class InsightGenerator {
     const insights = [];
 
     Object.entries(columns).forEach(([columnName, columnInfo]) => {
+      console.log('Generating insights for', columnName, columnInfo);
+
       switch (columnInfo.type) {
+
+
         case 'numeric':
           insights.push(...this.generateNumericColumnInsights(columnName, columnInfo));
           break;
@@ -74,6 +88,8 @@ export class InsightGenerator {
           break;
       }
     });
+
+    console.log('Generated column insights:', insights);
 
     return insights;
   }
@@ -95,6 +111,7 @@ export class InsightGenerator {
   }
 
   generateNumericColumnInsights(columnName, columnInfo) {
+    console.log('Generating numeric insights for', columnName);
     const insights = [];
     const stats = columnInfo.stats || {};
 
@@ -114,6 +131,8 @@ export class InsightGenerator {
   }
 
   generateCategoricalColumnInsights(columnName, columnInfo) {
+
+    console.log('Generating categorical insights for', columnName);
     const insights = [];
     const stats = columnInfo.stats || {};
 

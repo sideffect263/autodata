@@ -1,0 +1,167 @@
+[33mcommit b702350543153db33a4b7c528303c57119201d06[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mv2[m[33m, [m[1;31morigin/v2[m[33m)[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Mon Dec 2 16:15:15 2024 +0200
+
+    better tutrial for mobile
+
+[33mcommit 58b345ae6af99d1e738840e15ea5497c8277215c[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Mon Dec 2 15:51:44 2024 +0200
+
+    new icons
+
+[33mcommit cccaf71e010b2654ff4a448c3a84cc7054918eb4[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Mon Dec 2 15:35:28 2024 +0200
+
+    ai connected to 3d visuals but to get any good suggestion, added tutorial
+
+[33mcommit d6d078de5a6897ecd1c18eee263541338046fb67[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Wed Nov 27 15:18:51 2024 +0200
+
+    preloaded datasets
+
+[33mcommit 6e4317302ce6bc213798109edf857be0e40536b5[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Tue Nov 26 17:12:36 2024 +0200
+
+    handling big data
+
+[33mcommit 2233a5fde830b8f420918155dc867770b0283b08[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Tue Nov 26 17:06:32 2024 +0200
+
+    better mobile data source sekector
+
+[33mcommit 2225c9c83ee93772a89709f4333371cd666fbe6e[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Tue Nov 26 17:03:16 2024 +0200
+
+    better mobile
+
+[33mcommit 5ce03ad4bb781333cfc76f8a1d5ae9ff6fb0a8cc[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Tue Nov 26 16:54:52 2024 +0200
+
+    better mobile
+
+[33mcommit ba2dbadaf629ebcfe56357a7be14e23c313dc9ea[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Tue Nov 26 16:30:55 2024 +0200
+
+    ai implamented
+
+[33mcommit 700338b8d4f26427cf2e860e44303b720dc656fe[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sun Nov 24 16:06:49 2024 +0200
+
+    mobile responsive
+
+[33mcommit e04b1145b040c98e70a6adbdc93e0415b886eed5[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sun Nov 24 15:41:31 2024 +0200
+
+    better file handeling for nan, or inconsistency
+
+[33mcommit 786b9a6ee812631f9785419bf4e98c6e0679b788[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sun Nov 24 14:29:58 2024 +0200
+
+    new drop zone
+
+[33mcommit 7300cb3bf1b531f73cabc1c18fd39031a4351c3d[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sun Nov 24 13:17:03 2024 +0200
+
+    api integration
+
+[33mcommit b9af4c32eb122325e7b5e045d2c40f9c62f52ac9[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 19:48:59 2024 +0200
+
+    new setting page
+
+[33mcommit 9a8f65c4be5481a0bfc0485d656ebd1a0c8344db[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 19:41:47 2024 +0200
+
+    level 2 3d visuals
+
+[33mcommit 511b2d4ae2adf15d66defe06c99eef60a9e6c2c6[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 19:20:35 2024 +0200
+
+    3d visuals
+
+[33mcommit 64f72008d02f52d8a1b65c0973f3772ebbd2eadd[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 14:24:26 2024 +0200
+
+    2d charts
+
+[33mcommit 6812b9368fea49212dbe37d7fcef7f39510f3fc3[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 13:49:41 2024 +0200
+
+    fc
+
+[33mcommit 65fb4b7470d5405ca0b3c73355e3de6fc1760424[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 12:36:43 2024 +0200
+
+    new config
+
+[33mcommit d8b10389968204b360ac1974ac8fdb0dd23dad6f[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 04:43:14 2024 +0200
+
+    try
+
+[33mcommit 5edd0cf06c8b46656f4932db960dd7627332179f[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 04:35:02 2024 +0200
+
+    fc
+
+[33mcommit ffd3114fa3389f3c710a5e39bca1782c4a9b676f[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 04:30:44 2024 +0200
+
+    try
+
+[33mcommit 75c77d582d777e22ff974b779a861b7b7af7f3fd[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 04:15:30 2024 +0200
+
+    new src
+
+[33mcommit 52bfb588e6d7c9fb97a9d1f1815907b45db61624[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 04:01:40 2024 +0200
+
+    ls
+
+[33mcommit bc10b9791cc8ece8aad25bd2106236601b370599[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 03:03:35 2024 +0200
+
+    again
+
+[33mcommit 7b2f8440834d000b1780bffe6e141ca917141655[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 02:58:45 2024 +0200
+
+    again
+
+[33mcommit 060452565c3ca25278de7eb1680751328b7998c8[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 02:43:36 2024 +0200
+
+    fc
+
+[33mcommit c1e4a50576306f9a8070655db3739041f91f2f18[m
+Author: ariel biton <arielbiton03@gmail.com>
+Date:   Sat Nov 23 02:26:26 2024 +0200
+
+    first commit

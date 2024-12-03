@@ -128,20 +128,30 @@ class BrainService extends EventEmitter {
         }
       };
 
+      console.log('Running analysis pipeline:', analysis.metadata);
+
       // Analyze columns and data types
       analysis.columns = await this.columnAnalyzer.analyzeColumns(data);
+
+      console.log('Column analysis complete:', analysis.columns);
 
       // Find numeric columns for analysis
       const numericColumns = Object.entries(analysis.columns)
         .filter(([_, info]) => info.type === 'numeric')
         .map(([name]) => name);
 
+        console.log('Numeric columns:', numericColumns);
+
       // Update metadata
       analysis.metadata.numericColumns = numericColumns;
       analysis.metadata.primaryMetric = numericColumns[0] || null;
 
+      console.log('Primary metric:', analysis.metadata.primaryMetric);
+
       // Detect patterns
       analysis.patterns = await this.patternDetector.analyzePatterns(data, analysis.columns);
+
+      console.log('Pattern detection complete:', analysis.patterns);
 
       // Generate insights using InsightGenerator
       analysis.insights = await this.insightGenerator.generateInsights(
@@ -149,6 +159,8 @@ class BrainService extends EventEmitter {
         analysis.columns, 
         analysis.patterns
       );
+
+      console.log('Insight generation complete:', analysis.insights);
 
       // Generate visualization suggestions
       analysis.suggestions = await this.generateScoredSuggestions(
