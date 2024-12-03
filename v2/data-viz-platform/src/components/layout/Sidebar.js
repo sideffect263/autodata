@@ -58,7 +58,7 @@ const Sidebar = ({ currentView, onViewChange, dataLoaded, mobileOpen, setMobileO
       disabled: !dataLoaded
     },
     {
-      id: 'Settings',
+      id: 'settings',
       label: 'Settings',
       icon: SettingsIcon,
       disabled: false
