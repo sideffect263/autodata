@@ -16,6 +16,7 @@
     "@mui/material": "^5.15.6",
     "@react-three/drei": "^9.97.0",
     "@react-three/fiber": "^8.15.15",
+    "data-viz-platform": "file:",
     "date-fns": "^2.30.0",
     "lodash": "^4.17.21",
     "papaparse": "^5.4.1",
